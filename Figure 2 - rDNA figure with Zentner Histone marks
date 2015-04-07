@@ -1,0 +1,454 @@
+#######################Studying RNA:DNA hybrid occurrence within rDNA of IMR90 cells###################
+
+
+
+##To make the rDNA figure, we followed the alignment protocol from Zentner et al, 2008, so we added the rDNA fasta file to the 
+##beginning of Chr13 replacing the Ns that are there. 
+
+##To make rDNA hg19 file for aligning reads to rDNA
+##rDNA file from: gi|555853|gb|U13369.1|HSU13369 Human ribosomal DNA complete repeating unit
+cp hg19/hg19.fa hg19/hg19rDNA.fa
+grep -n ">" hg19/hg19rDNA.fa 
+1,4154179>chr1
+4154180,8207503>chr2
+8207504,11507878>chr3
+11507879,14693784>chr4
+14693785,17709040>chr5
+17709041,20560959>chr6
+20560960,23213272>chr7
+23213273,25652674>chr8
+25652675,28006233>chr9
+28006234,30265147>chr10
+30265148,32515257>chr11
+32515258,34746123>chr12
+34746124,36665622>chr13
+36665623,38454782>chr14
+38454783,40163640>chr15
+40163641,41669554>chr16
+41669555,43022809>chr17
+43022810,44324098>chr18
+44324099,45309583>chr19
+45309584,46360010>chr20
+46360011,47162176>chr21
+47162177,48017254>chr22
+48017255,50605098>chrX
+50605099,51594659>chrY
+cp hg19/hg19.fa hg19/hg19rDNA2.fa
+sed -n '1,4154179p' hg19/hg19rDNA2.fa > chr1.fa
+sed -n '4154180,8207503p' hg19/hg19rDNA2.fa > chr2.fa
+sed -n '8207504,11507878p' hg19/hg19rDNA2.fa > chr3.fa
+sed -n '11507879,14693784p' hg19/hg19rDNA2.fa > chr4.fa
+sed -n '14693785,17709040p' hg19/hg19rDNA2.fa > chr5.fa
+sed -n '17709041,20560959p' hg19/hg19rDNA2.fa > chr6.fa
+sed -n '20560960,23213272p' hg19/hg19rDNA2.fa > chr7.fa
+sed -n '23213273,25652674p' hg19/hg19rDNA2.fa > chr8.fa
+sed -n '25652675,28006233p' hg19/hg19rDNA2.fa > chr9.fa
+sed -n '28006234,30265147p' hg19/hg19rDNA2.fa > chr10.fa
+sed -n '30265148,32515257p' hg19/hg19rDNA2.fa > chr11.fa
+sed -n '32515258,34746123p' hg19/hg19rDNA2.fa > chr12.fa
+sed -n '34746124,36665622p' hg19/hg19rDNA2.fa > chr13.fa
+sed -n '36665623,38454782p' hg19/hg19rDNA2.fa > chr14.fa
+sed -n '38454783,40163640p' hg19/hg19rDNA2.fa > chr15.fa
+sed -n '40163641,41669554p' hg19/hg19rDNA2.fa > chr16.fa
+sed -n '41669555,43022809p' hg19/hg19rDNA2.fa > chr17.fa
+sed -n '43022810,44324098p' hg19/hg19rDNA2.fa > chr18.fa
+sed -n '44324099,45309583p' hg19/hg19rDNA2.fa > chr19.fa
+sed -n '45309584,46360010p' hg19/hg19rDNA2.fa > chr20.fa
+sed -n '46360011,47162176p' hg19/hg19rDNA2.fa > chr21.fa
+sed -n '47162177,48017254p' hg19/hg19rDNA2.fa > chr22.fa
+sed -n '48017255,50605098p' hg19/hg19rDNA2.fa > chrX.fa
+sed -n '50605099,51594659p' hg19/hg19rDNA2.fa > chrY.fa
+#Added 43614 of rDNA to the beginning of Chr13 instead of Ns - resulting in 97795995 nucleotides
+cat chr1.fa chr2.fa chr3.fa chr4.fa chr5.fa chr6.fa chr7.fa chr8.fa chr9.fa chr10.fa chr11.fa chr12.fa chr13.fa chr14.fa chr15.fa chr16.fa chr17.fa chr18.fa chr19.fa chr20.fa chr21.fa chr22.fa chrX.fa chrY.fa > hg19/hg19rDNA2.fa 
+
+#Transforming the RDIP-seq and input files from bam to fastq to align to the rDNA+genome fasta file
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/bedtools bamtofastq -i Imr90RDIP/orgfiles/Imr90Input.bam -fq Imr90RDIP/orgfiles/Imr90Input.fastq
+/apps1/bedtools/current/bedtools bamtofastq -i Imr90RDIP/orgfiles/Imr90RDIP.bam -fq Imr90RDIP/orgfiles/Imr90RDIP.fastq
+cp Imr90RDIP/orgfiles/Imr90RDIP.fastq Zentner/
+cp Imr90RDIP/orgfiles/Imr90Input.fastq Zentner/
+
+##Removing duplicates using custom perl script from Zentner et al (removeDupsFromFastQ)
+chmod u+x removeDupFromFastQ.pl 
+#For IMR90 Input
+perl ./removeDupFromFastQ.pl Imr90Input.fastq
+#Chose 32813069 unique FASTQ records out of 37394276 total (Found 4581207 duplicates).
+OUTImr90Input.fastq
+#For IMR90 RDIP-seq files
+perl ./removeDupFromFastQ.pl Imr90RDIP.fastq
+#Chose 63159731 unique FASTQ records out of 99064696 total (Found 35904965 duplicates).
+OUTImr90RDIP.fastq
+
+#Aligning fastq read files to hg19 genome plus rDNA on chr13 fasta file
+#Settings:
+# -m is number of possible alignments, set to 1, only allowing unique alignments
+# -n is is number of mismatches allowed, set to 2 to allow for 2 potential nucleotide mismatches
+/apps1/bowtie/current/bowtie -m 1 -n 2 -q ~/hg19/hg19rDNA2index OUTImr90Input.fastq -S ~/OUTImr90Input.sam
+/apps1/bowtie/current/bowtie -m 1 -n 2 -q ~/hg19/hg19rDNA2index ~/Zentner/OUTImr90RDIP.fastq -S ~/OUTImr90RDIP.sam
+#Changing SAM output files to BED files
+#samtools "current" refers to Samtools v.0.1.18
+/apps1/samtools/current/samtools view -Sb OUTImr90Input.sam > OUTImr90Input.bam
+/apps1/samtools/current/samtools view -Sb OUTImr90RDIP.sam > OUTImr90RDIP.bam
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/bamToBed -i OUTImr90Input.bam > OUTImr90Input.bed
+/apps1/bedtools/current/bamToBed -i OUTImr90RDIP.bam > OUTImr90RDIP.bed
+#Calling peaks using fseq - creating wiggle track
+#Settings: 
+# -f is fragment size, set to 200
+source /apps1/modules/init/bash
+-f 200 -of wig Zentner/OUTImr90Input.bed -o Zentner/OUTImr90Input
+-f 200 -of wig Zentner/OUTImr90RDIP.bed -o Zentner/OUTImr90RDIP
+#Extracting the rDNA section of chr13 to look at just the rDNA aligned reads
+head -43000 ~/Zentner/OUTImr90Input/chr13.wig > ~/Zentner/OUTImr90Input/chr13Input50k.wig
+head -43000 ~/Zentner/OUTImr90RDIP/chr13.wig > ~/Zentner/OUTImr90RDIP/chr13RDIP50k.wig
+
+
+#Calculating percent of RDIP-seq that reads aligned to rDNA
+#The following analysis was performed in R v. 2.15.0
+chr10<-read.table("~/Zentner/OUTImr90RDIP/chr10.wig", stringsAsFactors=F)
+chr11<-read.table("~/Zentner/OUTImr90RDIP/chr11.wig", stringsAsFactors=F)
+chr12<-read.table("~/Zentner/OUTImr90RDIP/chr12.wig", stringsAsFactors=F)
+chr13<-read.table("~/Zentner/OUTImr90RDIP/chr13.wig", stringsAsFactors=F)
+chr14<-read.table("~/Zentner/OUTImr90RDIP/chr14.wig", stringsAsFactors=F)
+chr15<-read.table("~/Zentner/OUTImr90RDIP/chr15.wig", stringsAsFactors=F)
+chr16<-read.table("~/Zentner/OUTImr90RDIP/chr16.wig", stringsAsFactors=F)
+chr17<-read.table("~/Zentner/OUTImr90RDIP/chr17.wig", stringsAsFactors=F)
+chr18<-read.table("~/Zentner/OUTImr90RDIP/chr18.wig", stringsAsFactors=F)
+chr19<-read.table("~/Zentner/OUTImr90RDIP/chr19.wig", stringsAsFactors=F)
+chr1<-read.table("~/Zentner/OUTImr90RDIP/chr1.wig", stringsAsFactors=F)
+chr20<-read.table("~/Zentner/OUTImr90RDIP/chr20.wig", stringsAsFactors=F)
+chr21<-read.table("~/Zentner/OUTImr90RDIP/chr21.wig", stringsAsFactors=F)
+chr22<-read.table("~/Zentner/OUTImr90RDIP/chr22.wig", stringsAsFactors=F)
+chr1<-read.table("~/Zentner/OUTImr90RDIP/chr1.wig", stringsAsFactors=F)
+chr2<-read.table("~/Zentner/OUTImr90RDIP/chr2.wig", stringsAsFactors=F)
+chr3<-read.table("~/Zentner/OUTImr90RDIP/chr3.wig", stringsAsFactors=F)
+chr4<-read.table("~/Zentner/OUTImr90RDIP/chr4.wig", stringsAsFactors=F)
+chr5<-read.table("~/Zentner/OUTImr90RDIP/chr5.wig", stringsAsFactors=F)
+chr6<-read.table("~/Zentner/OUTImr90RDIP/chr6.wig", stringsAsFactors=F)
+chr7<-read.table("~/Zentner/OUTImr90RDIP/chr7.wig", stringsAsFactors=F)
+chr8<-read.table("~/Zentner/OUTImr90RDIP/chr8.wig", stringsAsFactors=F)
+chr9<-read.table("~/Zentner/OUTImr90RDIP/chr9.wig", stringsAsFactors=F)
+chrX<-read.table("~/Zentner/OUTImr90RDIP/chrX.wig", stringsAsFactors=F)
+chrY<-read.table("~/Zentner/OUTImr90RDIP/chrY.wig", stringsAsFactors=F)
+> sum(chr1[,1])
+[1] 1393951
+> sum(chr2[,1])
+[1] 1311073
+> sum(chr3[,1])
+[1] 1061186
+> sum(chr4[,1])
+[1] 950846.4
+> sum(chr5[,1])
+[1] 953550.5
+> sum(chr6[,1])
+[1] 925810.4
+> sum(chr7[,1])
+[1] 889169.1
+> sum(chr8[,1])
+[1] 788468.6
+> sum(chr9[,1])
+[1] 650631.4
+> sum(chr10[,1])
+[1] 798416.4
+> sum(chr11[,1])
+[1] 786038.9
+> sum(chr12[,1])
+[1] 790533.9
+> sum(chr13[,1])
+[1] 804716.5
+> sum(chr14[,1])
+[1] 506173.8
+> sum(chr15[,1])
+[1] 472882.5
+> sum(chr16[,1])
+[1] 542116.1
+> sum(chr17[,1])
+[1] 544962.8
+> sum(chr18[,1])
+[1] 402539.4
+> sum(chr19[,1])
+[1] 531020.5
+> sum(chr20[,1])
+[1] 414460.3
+> sum(chr21[,1])
+[1] 224630.3
+> sum(chr22[,1])
+[1] 260708.7
+> sum(chrX[,1])
+[1] 830538.6
+> sum(chrY[,1])
+[1] 14154.25
+sum(sum(chr1[,1]),sum(chr2[,1]),sum(chr3[,1]),sum(chr4[,1]),sum(chr5[,1]),sum(chr6[,1]),sum(chr7[,1]),sum(chr8[,1]),sum(chr9[,1]),sum(chr10[,1]),sum(chr11[,1]),sum(chr12[,1]),sum(chr13[,1]),sum(chr14[,1]),sum(chr15[,1]),sum(chr16[,1]),sum(chr17[,1]),sum(chr18[,1]),sum(chr19[,1]),sum(chr20[,1]),sum(chr21[,1]),sum(chr22[,1]),sum(chrX[,1]),sum(chrY[,1]))
+[1] 16848579
+> sum(chr13[1:42998,1])
+[1] 326586.5
+> 326586.5/16848579
+[1] 0.01938362
+#rDNA aligned reads account for ~2% of RDIP-seq reads
+
+
+##To be able to visualize rRNA expression, we created a non-riboZero depleted RNA-seq sample and aligned that to the
+## rDNA+genome FASTA file in the same way we aligned the RDIP-seq and input reads
+wget http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10960/processed/I3A-R.BD1FAFACXX.lane_4_P0_I16.hg19.gsnap-rna-alignment.bam
+cp I3A-R.BD1FAFACXX.lane_4_P0_I16.hg19.gsnap-rna-alignment.bam RNAseqIMR90/I3A-R.bam
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/bedtools bamtofastq -i RNAseqIMR90/I3A-R.bam -fq RNAseqIMR90/I3A-R.fastq
+#Removing replicates using Zentner custom perl script
+chmod u+x removeDupFromFastQ.pl 
+cp RNAseqIMR90/I3A-R.fastq ~/
+perl ./removeDupFromFastQ.pl I3A-R.fastq
+Chose 8609678 unique FASTQ records out of 65491999 total (Found 56882321 duplicates).
+OUTI3A-R.fastq
+#Aligning reads with bowtie to genome+rDNA fasta
+/apps1/bowtie/current/bowtie -m 1 -n 2 -q ~/hg19/hg19rDNAindex OUTI3A-R.fastq -S ~/OUTI3A-R.sam
+#samtools "current" refers to Samtools v.0.1.18
+/apps1/samtools/current/samtools view -Sb OUTI3A-R.sam > OUTI3A-R.bam
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/bamToBed -i OUTI3A-R.bam > OUTI3A-R.bed
+#Calling peaks using fseq - creating wiggle track
+mkdir OUTI3A-RChr
+~/fseq2/bin/fseq -f 200 -of wig OUTI3A-R.bed -o OUTI3A-RChr
+head -43000 Zentner/OUTI3A-RChr/chr13.wig > Zentner/OUTI3A-RChr/chr13OUTI3A-R50k.wig
+
+#Summary of RNA-seq data by nucleotide for those aligned to rDNA 
+#The following analysis was performed in R v. 2.15.0
+RNAnoRep<-read.table("~/Zentner/OUTI3A-RChr/chr13OUTI3A-R50k.wig", stringsAsFactors=F)
+> summary(RNAnoRepbind[,2])
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+   0.0000    0.0004    0.0157  140.2000    3.7060 2903.0000 
+
+
+#To plot the RDIP-seq reads, RNA-seq data and Zentner et al Histone mark data aligned to the rDNA:
+#The following analysis was performed in R v. 2.15.0
+Input<-read.table("~/Zentner/OUTImr90Input/chr13Input50k.wig", stringsAsFactors=F)
+RDIP<-read.table("~/Zentner/OUTImr90RDIP/chr13RDIP50k.wig", stringsAsFactors=F)
+#Making a 43000bp file so each nucleotide is represented by one row
+b<-1:42999
+RDIPbind<-cbind(b, RDIP)
+Inputbind<-cbind(b, Input)
+#Summary of RDIP peaks aligned to rDNA (by nucleotide)
+> summary(RDIPbind[,2])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0104  1.0390  2.0810  7.5950  7.1770 84.8700 
+#Summary of Input peaks aligned to rDNA (by nucleotide)
+> summary(Inputbind[,2])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.1430  0.4730  0.5011  0.8029  1.5330 
+#Subtracting input from IP to make a normalized value for RDIP-seq reads aligned to rDNA
+normalized<-cbind(Inputbind, RDIPbind[,2])
+normalized<-cbind(normalized, normalized[,3]-normalized[,2])
+#Summary of normalized RDIP-seq peaks aligned to rDNA (by nucleotide)
+> summary(normalized[,4])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+-0.2221  0.6070  1.6200  7.0940  6.6480 83.5400 
+RNAnoRep<-read.table("~/Zentner/OUTI3A-RChr/chr13OUTI3A-R50k.wig", stringsAsFactors=F)
+RNAnoRepbind<-cbind(b, RNAnoRep)
+pdf("~/rDNARDIPandRNAseqwlines.pdf")
+par(mfrow=c(2,1))
+plot(normalized[,1], normalized[,4], type='h')
+#Adding ablines of the following rDNA features to make the figure (removed during the figure creation, but for alignment and guidance):
+#1-3656 5' External Transcribed spacer
+#3657-5527 18S ribosome RNA
+#5528-6622 Internal transcribed Spacer 1
+#6623-6779 5.8S ribosomal RNA
+#6780-7934 Internal transcribed spacer 2
+#7935-12969 28S ribosomal RNA
+#12970-13314 3' external transcribed spacer
+#13314-13350 SalI box
+abline(v=3656)
+abline(v=5527)
+abline(v=6622)
+abline(v=6779)
+abline(v=7934)
+abline(v=12969)
+abline(v=13314)
+abline(v=13350)
+plot(RNAnoRepbind[,1], RNAnoRepbind[,2], type='h')
+abline(v=3656)
+abline(v=5527)
+abline(v=6622)
+abline(v=6779)
+abline(v=7934)
+abline(v=12969)
+abline(v=13314)
+abline(v=13350)
+dev.off()
+
+
+## We received wiggle files from Zentner et al, 2008 for K562 histone marks from their analyses aligning to the rDNA genome
+##files in Zentner/Wiggle/
+  50000   50003  365102 H3K27ac.wig
+  50000   50003  368333 H3K27me3.wig
+  50000   50003  356494 H3K36me3.wig
+  50000   50003  363193 H3K4me1.wig
+  50000   50003  368297 H3K4me2.wig
+  50000   50003  359483 H3K4me3.wig
+  50000   50003  363110 H3K9ac.wig
+  50000   50003  371241 H3K9me1.wig
+  50000   50003  369522 H4K20me1.wig
+  50000   50003  368150 input.wig
+
+
+##Our analysis used an average of histone mark values per 50 nucleotide windows to make the figure more 
+##representative of trends of histone marks throughout the rDNA repeating unit:
+#The following analysis was performed in R v. 2.15.0
+H3K27ac<-read.table("~/Zentner/Wiggle/H3K27ac.wig", stringsAsFactors=F)
+H3K27me3<-read.table("~/Zentner/Wiggle/H3K27me3.wig", stringsAsFactors=F)
+H3K36me3<-read.table("~/Zentner/Wiggle/H3K36me3.wig", stringsAsFactors=F)
+H3K4me1<-read.table("~/Zentner/Wiggle/H3K4me1.wig", stringsAsFactors=F)
+H3K4me2<-read.table("~/Zentner/Wiggle/H3K4me2.wig", stringsAsFactors=F)
+H3K4me3<-read.table("~/Zentner/Wiggle/H3K4me3.wig", stringsAsFactors=F)
+H3K9ac<-read.table("~/Zentner/Wiggle/H3K9ac.wig", stringsAsFactors=F)
+H3K9me1<-read.table("~/Zentner/Wiggle/H3K9me1.wig", stringsAsFactors=F)
+H4K20me1<-read.table("~/Zentner/Wiggle/H4K20me1.wig", stringsAsFactors=F)
+input<-read.table("~/Zentner/Wiggle/input.wig", stringsAsFactors=F)
+#Making a 50000bp file so each nucleotide of the wiggle track is represented by one row
+b <- 1:49999
+#Normalizing histone mark values to the input
+H3K27ac<-H3K27ac[,1]-input[,1]
+H3K27me3<-H3K27me3[,1]-input[,1]
+H3K36me3<-H3K36me3[,1]-input[,1]
+H3K4me1<-H3K4me1[,1]-input[,1]
+H3K4me2<-H3K4me2[,1]-input[,1]
+H3K4me3<-H3K4me3[,1]-input[,1]
+H3K9ac<-H3K9ac[,1]-input[,1]
+H3K9me1<-H3K9me1[,1]-input[,1]
+H4K20me1<-H4K20me1[,1]-input[,1]
+#Making the mean values per 50 rows the value of histone mark for the figure
+#Taking the mean from every 50 rows
+H3K27acmean<-colMeans(matrix(H3K27ac, nrow=50))
+#Making 50bp windows from 1 to 50000
+H3K27acmean<-cbind(seq(from=1, to=49999, by=50),H3K27acmean)
+#Assigning the mean value per 50 bp window 
+H3K27acmean<-cbind(H3K27acmean, rep(1, nrow(H3K27acmean)))
+H3K27me3mean<-colMeans(matrix(H3K27me3, nrow=50))
+H3K27me3mean<-cbind(seq(from=1, to=49999, by=50),H3K27me3mean)
+H3K27me3mean<-cbind(H3K27me3mean, rep(1, nrow(H3K27me3mean)))
+H3K36me3mean<-colMeans(matrix(H3K36me3, nrow=50))
+H3K36me3mean<-cbind(seq(from=1, to=49999, by=50),H3K36me3mean)
+H3K36me3mean<-cbind(H3K36me3mean, rep(1, nrow(H3K36me3mean)))
+H3K4me1mean<-colMeans(matrix(H3K4me1, nrow=50))
+H3K4me1mean<-cbind(seq(from=1, to=49999, by=50),H3K4me1mean)
+H3K4me1mean<-cbind(H3K4me1mean, rep(1, nrow(H3K4me1mean)))
+H3K4me2mean<-colMeans(matrix(H3K4me2, nrow=50))
+H3K4me2mean<-cbind(seq(from=1, to=49999, by=50),H3K4me2mean)
+H3K4me2mean<-cbind(H3K4me2mean, rep(1, nrow(H3K4me2mean)))
+H3K4me3mean<-colMeans(matrix(H3K4me3, nrow=50))
+H3K4me3mean<-cbind(seq(from=1, to=49999, by=50),H3K4me3mean)
+H3K4me3mean<-cbind(H3K4me3mean, rep(1, nrow(H3K4me3mean)))
+H3K9acmean<-colMeans(matrix(H3K9ac, nrow=50))
+H3K9acmean<-cbind(seq(from=1, to=49999, by=50),H3K9acmean)
+H3K9acmean<-cbind(H3K9acmean, rep(1, nrow(H3K9acmean)))
+H3K9me1mean<-colMeans(matrix(H3K9me1, nrow=50))
+H3K9me1mean<-cbind(seq(from=1, to=49999, by=50),H3K9me1mean)
+H3K9me1mean<-cbind(H3K9me1mean, rep(1, nrow(H3K9me1mean)))
+H4K20me1mean<-colMeans(matrix(H4K20me1, nrow=50))
+H4K20me1mean<-cbind(seq(from=1, to=49999, by=50),H4K20me1mean)
+H4K20me1mean<-cbind(H4K20me1mean, rep(1, nrow(H4K20me1mean)))
+pdf("~/HistoneMarkMeanHeatPlot1withlines.pdf")
+par(mfrow=c(4,1))
+#Plotting the palette to be representative of the intensity of the mean value per 50bp window
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(85))
+plot(H3K4me1mean[,1], H3K4me1mean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K4me1mean[,2])))
+#Adding ablines of the following rDNA features to make the figure (removed during the figure creation, but for alignment and guidance):
+#1-3656 5' External Transcribed spacer
+#3657-5527 18S ribosome RNA
+#5528-6622 Internal transcribed Spacer 1
+#6623-6779 5.8S ribosomal RNA
+#6780-7934 Internal transcribed spacer 2
+#7935-12969 28S ribosomal RNA
+#12970-13314 3' external transcribed spacer
+#13314-13350 SalI box
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(155))
+plot(H3K4me2mean[,1], H3K4me2mean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K4me2mean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(40))
+plot(H3K4me3mean[,1], H3K4me3mean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K4me3mean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(40))
+plot(H3K9acmean[,1], H3K9acmean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K9acmean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+dev.off()
+pdf("~/HistoneMarkMeanHeatPlot2withlines.pdf")
+par(mfrow=c(5,1))
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(40))
+plot(H3K27acmean[,1], H3K27acmean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K27acmean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(20))
+plot(H3K36me3mean[,1], H3K36me3mean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K36me3mean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(25))
+plot(H3K9me1mean[,1], H3K9me1mean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K9me1mean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(85))
+plot(H3K27me3mean[,1], H3K27me3mean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H3K27me3mean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+palette(colorRampPalette(c("gray100","gray90","gray80","gray70","gray60","gray50", "gray40","gray30","gray20","gray10","gray0"))(45))
+plot(H4K20me1mean[,1], H4K20me1mean[,3], cex=.25, type="h", xlim=c(0,42999), ylim=c(0,1), col=((H4K20me1mean[,2])))
+abline(v=3656, col="red")
+abline(v=5527, col="red")
+abline(v=6622, col="red")
+abline(v=6779, col="red")
+abline(v=7934, col="red")
+abline(v=12969, col="red")
+abline(v=13314, col="red")
+abline(v=13350, col="red")
+dev.off()
+

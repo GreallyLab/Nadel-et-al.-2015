@@ -1,0 +1,49 @@
+######Investigation of Methylation within RDIP-Seq peaks compared to genome wide for IMR90 cells#######
+
+
+##Intersecting IMR90 methylation data from ENCODE with RDIP Peaks:
+##got bwbisulfiteseqIMR90.bedGraph from Fabien (from Encode GSM432687_UCSD.IMR90.Bisulfite-Seq.combined.wig)
+#V1 - chr
+#V2 - start
+#V3 - stop
+#V4 - methylation value
+#Intersecting with RDIP peaks from IMR90
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b bwbisulfiteseqIMR90.bedGraph -wo > IMR90RDIPMethylation
+#The following analysis was performed in R v. 2.15.0
+#RDIP intersected with methylation file
+RDIPMeth<-read.table("~/IMR90RDIPMethylation", stringsAsFactors=F)
+#Genome-wide methylation dataset
+Meth<-read.table("~/bwbisulfiteseqIMR90.bedGraph", stringsAsFactors=F)
+#Number of CG Loci for each dataset:
+> nrow(Meth)
+[1] 26440476
+> nrow(RDIPMeth)
+[1] 389813
+#Comparing summary methylation data of genome-wide and RDIP
+> summary(RDIPMeth[,12])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.3056  0.6731  0.5850  0.8750  1.0000 
+> summary(Meth[,4])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.4062  0.7500  0.6371  0.9020  1.0000 
+pdf("~/RDIPMethDensityPlot.pdf") 
+par(mfrow=c(2,1))
+plot(density(RDIPMeth[,12], bw=0.01), ylim=c(0,3), xlim=c(0,1))
+abline(v=0.6731)
+plot(density(Meth[,4], bw=0.01), ylim=c(0,3), xlim=c(0,1))
+abline(v=0.7500)
+dev.off()
+
+#Performing a Two-sample Kolmogorov-Smirnov test to compare differences in distribution 
+#of methylation values for genome-wide and RDIP intersecting methylation values 
+> ks.test(RDIPMeth[,12], Meth[,4])
+
+	Two-sample Kolmogorov-Smirnov test
+
+data:  RDIPMeth[, 12] and Meth[, 4] 
+D = 0.0722, p-value < 2.2e-16
+alternative hypothesis: two-sided 
+
+
+bw = "nrd0" 

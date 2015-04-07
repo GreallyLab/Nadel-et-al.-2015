@@ -1,0 +1,220 @@
+#######Investigating the nucleotide content of RDIP-seq peaks######
+
+
+#Dividing the genome into 100bp windows to assess the skewing of those windows
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/windowMaker -g hg19/hg19_chrInfo.txt -w 99 > hg19/GenomeWindows100bp.bed
+
+#The following analysis was performed in R v. 2.15.0
+windows<-read.table("~/hg19/GenomeWindows100bp.bed", stringsAsFactors=F)
+windows<-cbind(windows, seq(1,nrow(windows)), windows[,3]-windows[,2])
+#To only have windows of 100bp - excluding windows at the end of the chromosome which might be less than 100bp
+windows<-windows[grep("99", windows[,5]),]
+write.table(windows, "~/hg19/GenomeWindows100bp.bed", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - chr of window
+#V2 - start of window
+#V3 - stop of window
+#V4 - window number
+#V5 - length of window (99bp)
+
+#To get nucleotide ratios for 100bp windows throughout the genome using BSGenome
+windows<-read.table("~/hg19/GenomeWindows100bp.bed", stringsAsFactors=F)
+options("scipen"=1000)
+library(BSgenome)
+#Using hg19 alignment
+library(BSgenome.Hsapiens.UCSC.hg19)
+ls("package:BSgenome.Hsapiens.UCSC.hg19")
+Hsapiens
+windowsSplit<-split(windows, windows[,1])
+lapply(windowsSplit, function(eachchr){
+chr<-Hsapiens[[eachchr[1,1]]]
+active(masks(chr))<-F
+starts<-eachchr[,2]
+ends<-eachchr[,3]
+windows<-Views(chr, start=starts, end=ends)
+a<-alphabetFrequency(windows,baseOnly=T)
+output<-as.data.frame(cbind(eachchr[1,1], starts, ends, a), stringsAsFactors=F)
+write.table(output, paste("~/hg19/GenomeWindows100bpNucleotideCounts", eachchr[1,1], sep=""), row.names=F, col.names=F, sep="\t", quote=F)
+})
+#V1 - chr of window
+#V2 - start of window
+#V3 - stop of window
+#V4 - A nucleotide count for window
+#V5 - C nucleotide count for window
+#V6 - G nucleotide count for window
+#V7 - T nucleotide count for window
+#This writes out nucleotide counts for each chromosome in separate files (so you have all the windows for chr1 in one file, all
+#The windows for chr2 in a separate file, etc
+#To combine those into one file:
+cd hg19/
+cat GenomeWindows100bpNucleotideCountschr* > GenomeWindows100bpNucleotideCounts
+rm GenomeWindows100bpNucleotideCountschr*
+(R)
+windows<-read.table("~/hg19/GenomeWindows100bpNucleotideCounts", stringsAsFactors=F)
+windows<-cbind(windows[,1:7], windows[,4]/windows[,7], windows[,6]/windows[,5])
+write.table(windows, "~/hg19/GenomeWindows100bpNucleotideCounts", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - chr of window
+#V2 - start of window
+#V3 - stop of window
+#V4 - A nucleotide count for window
+#V5 - C nucleotide count for window
+#V6 - G nucleotide count for window
+#V7 - T nucleotide count for window
+#V8 - A/T nucleotide ratio
+#V9 - G/C nucleotide ratio
+par(mfrow=c(2,1))
+hist(log(windows[,8]))
+hist(log(windows[,9]))
+
+
+#Determining Nucleotide counts for RDIP Peaks
+#The following analysis was performed in R v. 2.15.0
+IMR90Minus10<-read.table("~/SecondStrandCounts/IMR90minus10", stringsAsFactors=F)
+HEKMinus10<-read.table("~/SecondStrandCounts/HEKminus10", stringsAsFactors=F)
+#For IMR90 peaks:
+options("scipen"=1000)
+library(BSgenome)
+#Using hg19 alignment
+library(BSgenome.Hsapiens.UCSC.hg19)
+ls("package:BSgenome.Hsapiens.UCSC.hg19")
+Hsapiens
+windowsSplit<-split(IMR90Minus10, IMR90Minus10[,1])
+lapply(windowsSplit, function(eachchr){
+chr<-Hsapiens[[eachchr[1,1]]]
+active(masks(chr))<-F
+starts<-eachchr[,2]
+ends<-eachchr[,3]
+IMR90Minus10<-Views(chr, start=starts, end=ends)
+a<-alphabetFrequency(IMR90Minus10,baseOnly=T)
+output<-as.data.frame(cbind(eachchr[1,1], starts, ends, a), stringsAsFactors=F)
+write.table(output, paste("~/IMR90Minus10NucleotideCounts", eachchr[1,1], sep=""), row.names=F, col.names=F, sep="\t", quote=F)
+})
+#For HEK Peaks:
+options("scipen"=1000)
+library(BSgenome)
+#Using hg19 alignment
+library(BSgenome.Hsapiens.UCSC.hg19)
+ls("package:BSgenome.Hsapiens.UCSC.hg19")
+Hsapiens
+windowsSplit<-split(HEKMinus10, HEKMinus10[,1])
+lapply(windowsSplit, function(eachchr){
+chr<-Hsapiens[[eachchr[1,1]]]
+active(masks(chr))<-F
+starts<-eachchr[,2]
+ends<-eachchr[,3]
+HEKMinus10<-Views(chr, start=starts, end=ends)
+a<-alphabetFrequency(HEKMinus10,baseOnly=T)
+output<-as.data.frame(cbind(eachchr[1,1], starts, ends, a), stringsAsFactors=F)
+write.table(output, paste("~/HEKMinus10NucleotideCounts", eachchr[1,1], sep=""), row.names=F, col.names=F, sep="\t", quote=F)
+})
+
+#To combine those into one file:
+cat IMR90Minus10NucleotideCountschr* > SecondStrandCounts/IMR90minus10NucleotideCounts
+rm IMR90Minus10NucleotideCountschr*
+cat HEKMinus10NucleotideCountschr* > SecondStrandCounts/HEKminus10NucleotideCounts
+rm HEKMinus10NucleotideCountschr*
+
+
+#The following analysis was performed in R v. 2.15.0
+HEK<-read.table("~/SecondStrandCounts/HEKminus10NucleotideCounts", stringsAsFactors=F)
+IMR90<-read.table("~/SecondStrandCounts/IMR90minus10NucleotideCounts", stringsAsFactors=F)
+IMR90<-cbind(IMR90[,1:7], log(IMR90[,4]/IMR90[,7]), log(IMR90[,6]/IMR90[,5]))
+HEK<-cbind(HEK[,1:7], log(HEK[,4]/HEK[,7]), log(HEK[,6]/HEK[,5]))
+(8 = A/T, 9= G/C)
+ASkew<-subset(IMR90, IMR90[,8]>0)
+TSkew<-subset(IMR90, IMR90[,8]<0)
+> nrow(ASkew)
+[1] 28498
+> nrow(TSkew)
+[1] 28671
+AGSkew<-subset(ASkew, ASkew[,9]>0)
+ACSkew<-subset(ASkew, ASkew[,9]<0)
+TGSkew<-subset(TSkew, TSkew[,9]>0)
+TCSkew<-subset(TSkew, TSkew[,9]<0)
+> nrow(AGSkew)
+[1] 24895
+> 24895/57001
+[1] 0.4367467
+> nrow(ACSkew)
+[1] 3532
+> 3532/57001
+[1] 0.06196383
+> nrow(TGSkew)
+[1] 3508
+> 3508/57001
+[1] 0.06154278
+> nrow(TCSkew)
+[1] 25066
+> 25066/57001
+[1] 0.4397467
+#to plot:
+library(scales)
+pdf("~/NucleotideCountPlot.pdf")
+plot(IMR90[,8], IMR90[,9], cex=.2,  col=alpha("black", 0.1), ylim=c(-6,6), xlim=c(-6,6))
+dev.off()
+
+#Test adding one nucleotide to each count to get rid of zeros:
+#The following analysis was performed in R v. 2.15.0
+IMR90<-read.table("~/SecondStrandCounts/IMR90minus10NucleotideCounts", stringsAsFactors=F)
+IMR90<-cbind(IMR90[,1:3], IMR90[,4]+1, IMR90[,5]+1, IMR90[,6]+1, IMR90[,7]+1)
+IMR90<-cbind(IMR90[,1:7], log(IMR90[,4]/IMR90[,7]), log(IMR90[,6]/IMR90[,5]))
+(8 = A/T, 9= G/C)
+ASkew<-subset(IMR90, IMR90[,8]>0)
+TSkew<-subset(IMR90, IMR90[,8]<0)
+> nrow(ASkew)
+[1] 28498
+> nrow(TSkew)
+[1] 28671
+AGSkew<-subset(ASkew, ASkew[,9]>0)
+ACSkew<-subset(ASkew, ASkew[,9]<0)
+TGSkew<-subset(TSkew, TSkew[,9]>0)
+TCSkew<-subset(TSkew, TSkew[,9]<0)
+> nrow(AGSkew)
+[1] 24895
+> nrow(ACSkew)
+[1] 3532
+> nrow(TGSkew)
+[1] 3508
+> nrow(TCSkew)
+[1] 25066
+#to plot:
+library(scales)
+pdf("~/NucleotideCountPlotPlusOne.pdf")
+plot(IMR90[,8], IMR90[,9], cex=.2,  col=alpha("black", 0.1), ylim=c(-6,6), xlim=c(-6,6))
+dev.off()
+#Is the same for adding one nucleotide for getting rid of zeros
+
+
+
+
+#Compared to Genome wide:
+#Remove gaps:
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/subtractBed -a hg19/GenomeWindows100bpNucleotideCounts -b RDIP1/hektracks/gaps.bed > hg19/GenomeWindows100bpNucleotideCountsNoGaps.bed
+
+#The following analysis was performed in R v. 2.15.0
+windows<-read.table("~/hg19/GenomeWindows100bpNucleotideCountsNoGaps.bed", stringsAsFactors=F)
+windows<-cbind(windows[,1:3], windows[,4]+1, windows[,5]+1, windows[,6]+1, windows[,7]+1)
+windows<-cbind(windows[,1:7], log(windows[,4]/windows[,7]), log(windows[,6]/windows[,5]))
+ASkew<-subset(windows, windows[,8]>0)
+TSkew<-subset(windows, windows[,8]<0)
+> nrow(ASkew)
+[1] 13835946
+> nrow(TSkew)
+[1] 13915478
+AGSkew<-subset(ASkew, ASkew[,9]>0)
+ACSkew<-subset(ASkew, ASkew[,9]<0)
+TGSkew<-subset(TSkew, TSkew[,9]>0)
+TCSkew<-subset(TSkew, TSkew[,9]<0)
+> nrow(AGSkew)
+[1] 7608913
+> nrow(ACSkew)
+[1] 5606441
+> nrow(TGSkew)
+[1] 5660818
+> nrow(TCSkew)
+[1] 7628604
+(8 = A/T, 9= G/C)
+#This file was too large to make a pdf. 
+
+

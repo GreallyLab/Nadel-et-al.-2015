@@ -1,0 +1,1907 @@
+####To look at enrichment and depletion of RNA:DNA hybrids within genomic features, we intersected them with the feature to find the
+####Overlapping nucleotide content.  We then ran permutation testing counting nucleotide intersect to see if the enrichment/depletion 
+####was significant
+
+
+
+##Preparing genomic feature bed files to be intersected with RDIP file:
+#The following analysis was performed in R v. 2.15.0
+#UCSC RepeatMasker File
+RepeatMasker<-read.table("~/RDIP1/hektracks/RepeatMasker", stringsAsFactors=F)
+RepeatMasker<-cbind(RepeatMasker[,6:8], RepeatMasker[,12], RepeatMasker[,11], RepeatMasker[,13])
+write.table(RepeatMasker, "~/RDIP1/hektracks/RepeatMasker.bed", row.names=F, col.names=F, sep="\t", quote=F, append=F)
+#RefSeq Gene bodies
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeq.bed", stringsAsFactors=F)
+nrow(RefSeq)
+[1]  39417
+#eliminating multiple transcripts for one gene
+RefSeq<-cbind(paste(as.character(RefSeq[,1]), as.character(RefSeq[,2]), sep=""), RefSeq)
+RefSeq<-RefSeq[which(!duplicated(RefSeq[,1])),]
+> nrow(RefSeq)
+[1] 24575
+#Nucleotide coverage of RefSeq gene bodies
+> sum(RefSeq[,7])
+[1] 1436645483
+write.table(RefSeq, "~/RDIP1/hektracks/RefSeqNorepeats.bed", row.names=F, col.names=F, sep="\t", quote=F)
+#Plus/Minus 2kb promoter file:
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeqNorepeats.bed", stringsAsFactors=F)
+Prom4kb<-cbind(RefSeq[,1], RefSeq[,2]-2000, RefSeq[,2]+2000, RefSeq[,4:6])
+write.table(Prom4kb, "~/RDIP1/hektracks/Prom4kbNoRepeats.bed", row.names=F, col.names=F, sep="\t", quote=F)
+> sum(Prom4kb[,7])
+[1] 98300000
+#Nucleotide coverage of RDIP - IMR90
+SecondStrandCounts/IMR90minus10
+RDIP<-read.table("~/SecondStrandCounts/IMR90minus10", stringsAsFactors=F)
+RDIP<-cbind(RDIP, RDIP[,3]-RDIP[,2])
+> sum(RDIP[,9])
+[1] 37409999
+
+#To get intergenic space:
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/complementBed -i RDIP1/hektracks/gaps.bed -g fakechrfile > RDIP1/hektracks/nogaps.bed
+/apps1/bedtools/current/subtractBed -a RDIP1/hektracks/nogaps.bed -b RDIP1/hektracks/RefSeq.bed > RDIP1/hektracks/nogapsNoGenes.bed
+/apps1/bedtools/current/subtractBed -a RDIP1/hektracks/nogapsNoGenes.bed -b RDIP1/hektracks/lncRNA.bed > RDIP1/hektracks/nogapsNoGenesnoLNCRNA.bed
+/apps1/bedtools/current/subtractBed -a RDIP1/hektracks/nogapsNoGenesnoLNCRNA.bed -b RDIP1/hektracks/Prom4kb.bed > RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed -wao > Imr90RDIP/Intersects/minus10/IntergenicRDIP.bed
+Intergenic<-read.table("~/RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed", stringsAsFactors=F)
+Intergenic<-cbind(Intergenic, Intergenic[,3]-Intergenic[,2])
+> sum(Intergenic[,4])
+[1] 1323292457
+
+
+#Intersecting RNA:DNA hybrids of IMR90 cells with genomic features to get observed nucleotide intersect
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/CpGIslands.bed -wao > Imr90RDIP/Intersects/minus10/CpGIslandsImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/RefSeqNorepeats.bed -wao > Imr90RDIP/Intersects/minus10/RefSeqImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/RepeatMasker.bed -wao > Imr90RDIP/Intersects/minus10/RepeatMaskerImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Prom4kbNoRepeats.bed -wao > Imr90RDIP/Intersects/minus10/RefSeqProm2kbImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/lncRNA.bed -wao > Imr90RDIP/Intersects/minus10/lncRNAsImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/intergenicspace.bed -wao > Imr90RDIP/Intersects/minus10/intergenicspaceImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/interRefSeqgenicspace.bed -wao > Imr90RDIP/Intersects/minus10/interRefSeqgenicspaceImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/DNase.bed -wao > Imr90RDIP/Intersects/minus10/DNaseImr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/pol2.bed -wao > Imr90RDIP/Intersects/minus10/pol2Imr90RDIP
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b SecondStrandCounts/HEKminus10 -wao > Imr90RDIP/Intersects/minus10/HEKImr90RDIP
+
+#The following analysis was performed in R v. 2.15.0
+HEKIMR90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/HEKImr90RDIP", stringsAsFactors=F)
+CpGIslandsImr90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/CpGIslandsImr90RDIP", stringsAsFactors=F)
+RefSeqImr90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/RefSeqImr90RDIP", stringsAsFactors=F)
+RepeatMaskerImr90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/RepeatMaskerImr90RDIP", stringsAsFactors=F)
+RefSeqProm4kbImr90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/RefSeqProm4kbImr90RDIP", stringsAsFactors=F)
+lncRNAsImr90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/lncRNAsImr90RDIP", stringsAsFactors=F)
+DNaseImr90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/DNaseImr90RDIP", stringsAsFactors=F)
+IntergenicRDIP<-read.table("~/Imr90RDIP/Intersects/minus10/IntergenicRDIP.bed", stringsAsFactors=F)
+
+#Nucleotide count of observed intersect between RNA:DNA hybrid IMR90 peaks and genomic feature
+>sum(IntergenicRDIP[,ncol(IntergenicRDIP)])
+[1] 17824359
+> sum(HEKIMR90RDIP[,ncol(HEKIMR90RDIP)])
+[1] 15780929
+> sum(CpGIslandsImr90RDIP[,ncol(CpGIslandsImr90RDIP)])
+[1] 499398
+> sum(RefSeqImr90RDIP[,ncol(RefSeqImr90RDIP)])
+[1] 18021390
+> sum(RepeatMaskerImr90RDIP[,ncol(RepeatMaskerImr90RDIP)])
+[1] 22349098
+> sum(RefSeqProm4kbImr90RDIP[,ncol(RefSeqProm4kbImr90RDIP)])
+[1] 2868500
+> sum(lncRNAsImr90RDIP[,ncol(lncRNAsImr90RDIP)])
+[1] 6064533
+> sum(DNaseImr90RDIP[,ncol(DNaseImr90RDIP)])
+[1] 1306698
+#Dividing RepeatMasker by different types of repeats:
+> sum(subset(RepeatMaskerImr90RDIP[,15], RepeatMaskerImr90RDIP[,12]=="LINE"))
+[1] 8068561
+> sum(subset(RepeatMaskerImr90RDIP[,15], RepeatMaskerImr90RDIP[,12]=="LTR"))
+[1] 3437149
+> sum(subset(RepeatMaskerImr90RDIP[,15], RepeatMaskerImr90RDIP[,12]=="Satellite"))
+[1] 416786
+> sum(subset(RepeatMaskerImr90RDIP[,15], RepeatMaskerImr90RDIP[,12]=="Simple_repeat"))
+[1] 2994232
+> sum(subset(RepeatMaskerImr90RDIP[,15], RepeatMaskerImr90RDIP[,12]=="SINE"))
+[1] 3984790
+> sum(subset(RepeatMaskerImr90RDIP[,15], RepeatMaskerImr90RDIP[,12]=="DNA"))
+[1] 494791
+> sum(subset(RepeatMaskerImr90RDIP[,15], RepeatMaskerImr90RDIP[,12]=="Low_complexity"))
+[1] 2841530
+#Further investigating types of low complexity repeats
+lowcomplex<-(subset(RepeatMaskerImr90RDIP, RepeatMaskerImr90RDIP[,12]=="Low_complexity"))
+> sum(subset(lowcomplex[,15], lowcomplex[,13]=="CT-rich"))
+[1] 705965
+> sum(subset(lowcomplex[,15], lowcomplex[,13]=="GA-rich"))
+[1] 748246
+#Looking at low complexity repeats based on strand of RDIP peak they intersect with
+neg<-subset(lowcomplex, lowcomplex[,7]<0)
+pos<-subset(lowcomplex, lowcomplex[,7]>0)
+> sum(subset(neg[,15], neg[,13]=="CT-rich"))
+[1] 704293
+> sum(subset(neg[,15], neg[,13]=="GA-rich"))
+[1] 5846
+> sum(subset(pos[,15], pos[,13]=="CT-rich"))
+[1] 1672
+> sum(subset(pos[,15], pos[,13]=="GA-rich"))
+[1] 742400
+> sum(subset(pos[,15], pos[,13]=="A-rich"))
+[1] 292272
+> sum(subset(pos[,15], pos[,13]=="G-rich"))
+[1] 375246
+> sum(subset(neg[,15], neg[,13]=="C-rich"))
+[1] 381174
+> sum(subset(neg[,15], neg[,13]=="T-rich"))
+[1] 245587
+#1446693 GA rich total (0.5091247)
+#1672+5846 CT rich total (0.0026457577)
+#Further investigating types of Satellite repeats
+Satellite<-(subset(RepeatMaskerImr90RDIP, RepeatMaskerImr90RDIP[,12]=="Satellite"))
+> table(Satellite[,13])
+
+    ACRO1 ALR/Alpha  BSR/Beta  (CATTC)n       CER    D20S16  (GAATG)n    GSATII 
+       21        13         6       429         1        24       577         6 
+    HSAT4     HSAT5    HSATII      LSAU      MSR1    REP522     SATR1      SST1 
+        1         2        26         9        27        68         1        16 
+SUBTEL_sa      TAR1 
+        1        13 
+> sum(subset(Satellite[,15], Satellite[,14]=="acro"))
+[1] 13420
+> sum(subset(Satellite[,15], Satellite[,14]=="centr"))
+[1] 17624
+> sum(subset(Satellite[,15], Satellite[,14]=="Satellite"))
+[1] 333493
+> sum(subset(Satellite[,15], Satellite[,14]=="telo"))
+[1] 52249
+#Looking at types of satellite repeats based on their intersection with strandedness of RDIP peaks
+neg<-subset(Satellite, Satellite[,7]<0)
+pos<-subset(Satellite, Satellite[,7]>0)
+> sum(subset(pos[,15], pos[,13]=="(GAATG)n"))
+[1] 183367
+> sum(subset(neg[,15], neg[,13]=="(CATTC)n"))
+[1] 135594
+
+
+#Nucleotide counts of RDIP peaks intersecting with Genomic feature peaks were compared with an observed/expected ratio based on genome occupancy  
+#The significance of this enrichment/depletion was measured using permutation testing
+
+
+
+#Establishing genome to run permutation testing within:
+chr<-cbind(seq(1:22), "chr")
+chr<-paste(as.character(chr[,2]), as.character(chr[,1]), sep="")
+chr<-cbind(chr, as.numeric(c(249250621,243199373,198022430,191154276,180915260,171115067,159138663,146364022,141213431,135534747,135006516,133851895,115169878,107349540,102531392,90354753,81195210,78077248,59128983,63025520,48129895,51304566)))
+write.table(chr, "~/fakechrfile", row.names=F, col.names=F, sep="\t", quote=F)
+
+
+###Permutation tests where output is nucleotide count of intersect between IMR90 RDIP file and genomic feature file
+###Then, 100 tests off permutations where the RDIP file (size of peaks, etc) is scrambled throughout the genome (excluding gaps) 
+### And those new 100 files are intersected with the genomic feature to look for nucleotide intersection enrichment or depletion with RDIP peaks
+#Bed shuffling analysis based on:
+# -g fakechrfile represents possible spaces in the genome to be shuffled excluding gaps
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/shuffleBed -i SecondStrandCounts/IMR90minus10 -g fakechrfile -excl RDIP1/hektracks/gaps.bed > shuffledRDIP1.bed
+
+#The following analysis was performed in R v. 2.15.0
+#Permutation tests
+bed_boot_scoot<-function(bed1, bed2, n.iter=100){
+bedTools.2in<-function(functionstring="/apps1/bedtools/current/intersectBed -wao",bed1,bed2,opt.string="")
+{
+  #create temp files
+  a.file=tempfile()
+  b.file=tempfile()
+  out   =tempfile()
+  options(scipen =99) # not to use scientific notation when writing out
+  
+  #write bed formatted dataframes to tempfile
+  write.table(bed1,file=a.file,quote=F,sep="\t",col.names=F,row.names=F)
+  write.table(bed2,file=b.file,quote=F,sep="\t",col.names=F,row.names=F)
+ 
+  # create the command string and call the command using system()
+  command=paste(functionstring,"-a",a.file,"-b",b.file,opt.string,">",out,sep=" ")
+  cat(command,"\n")
+  try(system(command))
+  res=try(read.table(out,header=F),silent=T) 
+  unlink(a.file);unlink(b.file);unlink(out)
+  if (is(res, "try-error")) return(mat.or.vec(0,3)) else return(res)
+}
+bedTools2.2in<-function(functionstring="/apps1/bedtools/current/shuffleBed",bed1,bed2,opt.string="")
+{
+  #create temp files
+  a.file=tempfile()
+  b.file=tempfile()
+ 
+  out   =tempfile()
+  options(scipen =99) # not to use scientific notation when writing out
+  
+  #write bed formatted dataframes to tempfile
+  write.table(bed1,file=a.file,quote=F,sep="\t",col.names=F,row.names=F)
+  write.table(bed2,file=b.file,quote=F,sep="\t",col.names=F,row.names=F)
+ 
+  # create the command string and call the command using system()
+  command=paste(functionstring,"-i",a.file,"-g",b.file,opt.string,">",out,sep=" ")
+  cat(command,"\n")
+  try(system(command))
+  res=try(read.table(out,header=F),silent=T) 
+  unlink(a.file);unlink(b.file);unlink(out)
+  if (is(res, "try-error")) return(mat.or.vec(0,3)) else return(res)
+}
+
+mainobs<-try(bedTools.2in(bed1=bed1, bed2=bed2, opt.string="-wao"), silent=T)
+A<-ifelse(!is.null(ncol(mainobs)),
+ { sum(mainobs[,ncol(mainobs)])},
+
+ {1})
+mainobs<-A
+simulations<-sapply(1:n.iter, function(x){
+print(x)
+newbed<-bedTools2.2in(bed1=read.table("~/SecondStrandCounts/IMR90minus10"),bed2=read.table("~/fakechrfile"), opt.string="-excl RDIP1/hektracks/gaps.bed")
+temp<-try(bedTools.2in(bed1=newbed, bed2=bed2), silent=T)
+ifelse(!is.null(ncol(temp)),
+ {return(sum(temp[,ncol(temp)]))},
+ {1})})
+return(list(mainobs, simulations))}
+
+##Run Function##
+result1<-bed_boot(bed1=bed1, bed2=bed2, bed3=bed3)
+
+##Plot Results##
+pdf("~/Plot")
+plot(density(result1[[2]]))
+dev.off()
+
+IMR90<-read.table("~/SecondStrandCounts/IMR90minus10", stringsAsFactors=F)
+Repeats<-read.table("~/RDIP1/hektracks/RepeatMasker.bed", stringsAsFactors=F)
+
+
+#HEK293T peaks:
+HEK<-read.table("~/SecondStrandCounts/HEKminus10", stringsAsFactors=F)
+> nrow(HEK)
+[1] 34946
+> nrow(IMR90)
+[1] 57308
+resultHEK<-bed_boot_scoot(bed1=IMR90, bed2=HEK)
+> resultHEK
+[[1]]
+[1] 15780929
+[[2]]
+  [1] 325815 339521 341539 319592 304711 335314 339746 330541 310901 327213
+ [11] 329661 330637 350071 334561 334267 344948 336855 328258 328766 319027
+ [21] 336668 336428 336427 332941 316779 345352 354505 307298 326616 334434
+ [31] 324378 337959 322659 319598 323209 319917 325233 343116 332712 322813
+ [41] 331330 353715 329478 330165 333449 336600 332595 346145 340130 314576
+ [51] 308420 320692 347607 331612 342621 319485 330111 332326 347462 336589
+ [61] 328434 336479 322873 336707 317731 337855 348134 319339 333850 309077
+ [71] 320188 311197 321853 337886 317051 337035 342925 326350 330966 334470
+ [81] 322609 325898 329574 341576 341322 312474 336192 326279 338518 342580
+ [91] 334261 338292 321580 322198 313114 318983 347789 331854 350552 331053
+pdf("~/HEKNucleotideCountPermTest.pdf")
+plot(density(log(resultHEK[[2]])), xlim=c((log(mean(resultHEK[[2]]))-3),(log(mean(resultHEK[[2]]))+3)), xlab="HEK")
+polygon(density(log(resultHEK[[2]])), col="gray", border="gray")
+abline(v=log(resultHEK[[1]]), lwd=2, col="red")
+dev.off()
+
+pdf("~/HEKNucleotideCountPermTestAdjustedX.pdf")
+plot(density(log(resultHEK[[2]])), xlim=c((log(mean(resultHEK[[2]]))-5),(log(mean(resultHEK[[2]]))+5)), xlab="HEK")
+polygon(density(log(resultHEK[[2]])), col="gray", border="gray")
+abline(v=log(resultHEK[[1]]), lwd=2, col="red")
+dev.off()
+
+#DNase HS
+DNase<-read.table("~/RDIP1/hektracks/DNase.bed", stringsAsFactors=F)
+result15<-bed_boot_scoot(bed1=IMR90, bed2=DNase)
+> result15
+[[1]]
+[1] 1306698
+[[2]]
+  [1] 693754 665323 664722 670862 687496 738571 656809 687533 695631 707352
+ [11] 669830 680257 661402 694267 691757 674278 683631 655751 674555 698911
+ [21] 669771 667885 709982 683670 675032 670217 652364 692719 685479 678246
+ [31] 692466 686683 667078 730964 690226 689391 684206 674352 665822 696922
+ [41] 669196 688290 666996 695706 686852 687725 690760 685767 690859 686164
+ [51] 699325 685783 701719 651546 670344 701156 681947 717551 685604 667435
+ [61] 669716 719081 685291 654514 713197 662784 704556 650819 680297 679560
+ [71] 669115 680741 666691 693868 673384 689213 678902 656828 654921 640805
+ [81] 706021 684491 649312 681527 666529 681458 689751 697247 682666 685863
+ [91] 699288 682395 694189 685985 674032 700414 703754 681601 665377 688139
+pdf("~/DNaseNucleotideCountPermTest.pdf")
+plot(density(log(result15[[2]])), xlim=c((log(mean(result15[[2]]))-3),(log(mean(result15[[2]]))+3)), xlab="DNase")
+polygon(density(log(result15[[2]])), col="gray", border="gray")
+abline(v=log(result15[[1]]), lwd=2, col="red")
+dev.off()
+
+#LowComplexityRepeats
+lowcomplex<-subset(Repeats, Repeats[,4]=="Low_complexity")
+result2<-bed_boot_scoot(bed1=IMR90, bed2=lowcomplex)
+> result2
+[[1]]
+[1] 2841530
+[[2]]
+  [1] 225146 222051 218542 216738 219493 221573 224697 216913 218309 223465
+ [11] 224154 223704 220885 222507 221672 223039 220831 220108 221539 230161
+ [21] 225193 217262 218453 225211 217532 221686 219627 213750 221575 219936
+ [31] 220586 223200 219295 217417 219750 225754 225446 221903 226320 221203
+ [41] 219664 221389 220093 218305 222941 214136 225071 218297 218455 223588
+ [51] 229924 221019 225721 230366 222924 224660 228169 222654 221405 212744
+ [61] 220925 220269 224516 218889 218920 222394 224740 220707 220924 221413
+ [71] 222251 226681 227669 217133 220129 220776 216773 216915 221965 227337
+ [81] 223679 223856 233142 229315 222471 216057 224152 219560 213439 223037
+ [91] 226386 219737 232407 224739 217130 222384 228673 221737 224593 219654
+pdf("~/LowComplexityRepNucleotideCountPermTest.pdf")
+plot(density(log(result2[[2]])), xlim=c(11,18))
+abline(v=log(result2[[1]]))
+dev.off()
+  
+#LINE Repeats 
+result1<-bed_boot_scoot(bed1=IMR90, bed2=LINE)
+LINE<-subset(Repeats, Repeats[,4]=="LINE")
+> result1
+[[1]]
+[1] 8068561
+[[2]]
+  [1] 8171102 8088944 8088017 8182783 8150701 8052633 8035006 8116606 8102891
+ [10] 8086380 8154144 8068429 8101888 8185366 8156249 8146636 8039065 8107657
+ [19] 8196945 8185555 8093383 8108771 8079439 8183081 8080307 8167819 8092748
+ [28] 8190538 8038913 8172611 8148485 8222225 8046022 8055902 8137966 8146184
+ [37] 8076365 8123141 8110428 8128794 8135263 8052051 8117384 8101812 8115454
+ [46] 8168995 8225381 8064003 8074721 8102359 8157075 8124537 8128212 8108622
+ [55] 8238817 8010747 8112567 8159391 8052965 8081231 8131209 8138460 8074812
+ [64] 8094976 8125029 8096847 8016726 8254164 8178510 8128873 8113185 8135516
+ [73] 8275299 8108631 8125554 8138580 8107571 8140391 8194306 8020265 8083530
+ [82] 8193957 8140813 8107212 8153628 8236672 8093710 8064876 8162009 8013145
+ [91] 8135843 8100803 8096932 8089867 8196034 8071225 8130258 8095495 8147611
+[100] 8180964
+pdf("~/LINENucleotideCountPermTest.pdf")
+plot(density(log(result1[[2]])), xlim=c(11,18))
+abline(v=log(result1[[1]]))
+dev.off()
+ 
+#DNA Repeats
+DNARepeats<-subset(Repeats, Repeats[,4]=="DNA")
+result3<-bed_boot_scoot(bed1=IMR90, bed2=DNARepeats)
+> result3
+[[1]]
+[1] 494791
+[[2]]
+  [1] 1309092 1327920 1263232 1314868 1313931 1339343 1329656 1290818 1273265
+ [10] 1280006 1315218 1354234 1324823 1321312 1305056 1300282 1281372 1300783
+ [19] 1298690 1333182 1293514 1281521 1301818 1281051 1307958 1318037 1321889
+ [28] 1347949 1325440 1312604 1287450 1306474 1340949 1331633 1342622 1309853
+ [37] 1317743 1339483 1296208 1301132 1310633 1296161 1315297 1273507 1276627
+ [46] 1333755 1286514 1319706 1284842 1324789 1320714 1318467 1327943 1319268
+ [55] 1308068 1285347 1300473 1286180 1321550 1312248 1310475 1288612 1293048
+ [64] 1333713 1309240 1325792 1301612 1326697 1309948 1312913 1279953 1301211
+ [73] 1355926 1304542 1295167 1296175 1325650 1323375 1307833 1311143 1298409
+ [82] 1306621 1320171 1312523 1311437 1315362 1283728 1303778 1320469 1325246
+ [91] 1329591 1311512 1346954 1312235 1327082 1312578 1323270 1320084 1307981
+[100] 1310010
+pdf("~/DNARepNucleotideCountPermTest.pdf")
+plot(density(log(result3[[2]])), xlim=c(11,18))
+abline(v=log(result3[[1]]))
+dev.off()
+
+#CpG Islands
+result4<-bed_boot_scoot(bed1=IMR90, bed2=CpGIslands)
+result4
+[[1]]
+[1] 499398
+[[2]]
+  [1] 252124 268895 276976 264486 275842 284883 264426 273877 265982 255099
+ [11] 250381 280310 266069 230048 243233 257567 263037 272420 273583 264113
+ [21] 270706 257670 264343 256529 276535 265973 264007 252014 256946 255436
+ [31] 249979 273784 248608 252309 266105 263998 251370 292781 239285 275290
+ [41] 262042 274373 251898 245220 263209 270420 265007 243767 294918 243841
+ [51] 268021 249671 253712 242412 269560 241791 284429 259391 279695 259809
+ [61] 294169 262668 264891 283173 259019 263955 269809 286589 272171 257255
+ [71] 268934 261841 267097 286801 250925 238610 261992 277237 258179 259751
+ [81] 264126 246742 270517 263026 259551 268648 258429 255748 255830 250020
+ [91] 265593 259407 262085 276891 272678 262991 270334 262177 282301 248533
+pdf("~/CpGIslandsNucleotideCountPermTest.pdf")
+plot(density(log(result4[[2]])), xlim=c(11,18))
+abline(v=log(result4[[1]]))
+dev.off()
+
+#RefSeq Genes
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeq.bed", stringsAsFactors=F)
+RefSeq<-RefSeq[,2:7]
+result5<-bed_boot_scoot(bed1=IMR90, bed2=RefSeq)
+> result5
+[[1]]
+[1] 18021390
+[[2]]
+  [1] 19024336 19023836 19031037 18902652 19113973 18765816 18789819 19035690
+  [9] 18986011 19112239 19039547 19330622 18958264 19130576 18911040 18990864
+ [17] 19063522 19136513 19041291 19086834 19134524 18825233 19022661 18872342
+ [25] 19090823 19189695 18886191 18896737 18973308 18857806 19190076 18973617
+ [33] 19172059 18955045 19134005 19062847 18769582 19146590 19078007 18992674
+ [41] 18823869 19022472 19151607 19014466 19172714 18977006 18801279 19017710
+ [49] 18777798 18961750 19010832 18824496 19028500 19088599 18876279 18902089
+ [57] 19069862 18931526 18828673 19140699 19190161 19058758 18940707 18944821
+ [65] 19106807 19009867 19085885 18949746 18896957 19239098 19044839 18886683
+ [73] 19201289 19062171 18967402 18799565 18895004 19178669 18966030 18961855
+ [81] 19054488 19107588 19253132 18921284 18818213 19039936 19188255 19263830
+ [89] 19154473 18985885 19162802 19069141 18894898 19145921 19048704 18866844
+ [97] 19131611 18755839 19096837 18891303
+pdf("~/RefSeqNucleotideCountPermTest.pdf")
+plot(density(log(result5[[2]])), xlim=c(11,18))
+abline(v=log(result5[[1]]))
+dev.off()
+
+
+#LTR Repeats
+LTR<-subset(Repeats, Repeats[,4]=="LTR")
+result6<-bed_boot_scoot(bed1=IMR90, bed2=LTR)
+> result6 
+[[1]]
+[1] 3437149
+[[2]]
+  [1] 3425388 3466989 3468613 3487875 3381539 3439104 3380698 3505896 3428173
+ [10] 3466393 3407538 3398997 3435401 3496732 3400556 3403816 3470137 3405109
+ [19] 3393483 3418451 3467379 3477179 3477404 3440962 3408706 3440478 3522317
+ [28] 3442350 3424171 3451511 3424660 3397481 3376238 3364157 3432083 3438881
+ [37] 3378825 3406507 3422772 3509537 3411057 3436517 3436836 3424992 3421373
+ [46] 3395875 3474786 3456463 3434795 3437982 3423498 3418688 3378836 3419235
+ [55] 3438308 3431810 3394913 3445106 3420043 3480830 3369621 3364871 3443424
+ [64] 3393339 3444230 3388245 3452431 3442768 3354744 3498646 3425495 3488881
+ [73] 3423603 3417267 3483974 3459173 3407619 3425100 3402527 3468997 3448251
+ [82] 3396878 3419219 3451870 3442123 3491211 3423545 3478591 3448046 3435065
+ [91] 3403189 3357452 3436326 3454603 3365385 3460461 3375571 3416175 3454507
+[100] 3408975
+pdf("~/LTRRepNucleotideCountPermTest.pdf")
+plot(density(log(result6[[2]])), xlim=c(11,18))
+abline(v=log(result6[[1]]))
+dev.off()
+
+
+#Satellite Repeats
+Satellite<-subset(Repeats, Repeats[,4]=="Satellite")
+result7<-bed_boot_scoot(bed1=IMR90, bed2=Satellite)
+> result7
+[[1]]
+[1] 416786
+[[2]]
+  [1] 135971 127025 127034 117468 133013 134651 136229 130780 127736 126693
+ [11] 129268 141270 134077 118633 167034 120842 128254 138496 123800 125757
+ [21] 121553 138049 125503 124805 133275 140811 121072 122883 132907 129875
+ [31] 138197 119906 122965 141120 137853 128294 135536 127412 126959 107097
+ [41] 137344 126172 141061 130155 132109 132437 125886 118139 155863 142351
+ [51] 117191 122366 130620 122326 124132 143761 133606 121917 137954 121367
+ [61] 119109 135614 150362 120762 139131 127537 127203 107546 128465 130722
+ [71] 132255 135806 129745 124056 132403 127079 116835 144138 135953 134643
+ [81] 138455 133927 129232 143753 125003 125565 146373 119925 120912 132689
+ [91] 136140 131377 113636 109613 121408 134340 122928 129170 113717 122764
+pdf("~/SatelliteRepNucleotideCountPermTest.pdf")
+plot(density(log(result7[[2]])), xlim=c(11,18))
+abline(v=log(result7[[1]]))
+dev.off()
+
+
+#Simple Repeats
+Simple_repeat<-subset(Repeats, Repeats[,4]=="Simple_repeat")
+result8<-bed_boot_scoot(bed1=IMR90, bed2=Simple_repeat)
+> result8
+[[1]]
+[1] 2994232
+[[2]]
+  [1] 334262 327340 338529 331510 325116 330740 339351 320698 341658 328402
+ [11] 339852 341656 334430 331655 331526 336122 337389 341587 332467 323374
+ [21] 328465 336295 323191 330985 321331 321869 331494 329288 314442 323862
+ [31] 317522 336653 336227 337998 334137 336207 332062 324256 335550 325762
+ [41] 315887 317916 326705 332942 333891 321748 326298 328238 327587 332799
+ [51] 354998 323881 340994 335107 325703 321493 321406 325779 333423 320268
+ [61] 327656 318433 325768 331764 322620 327476 310065 328596 322429 324968
+ [71] 332953 324377 318433 340852 333057 327546 320496 332486 322531 330237
+ [81] 331915 335573 324837 335891 331708 326096 333525 346484 326533 327727
+ [91] 332961 328190 331762 331729 320425 321222 326493 321543 323505 327143
+pdf("~/SimpleRepNucleotideCountPermTest.pdf")
+plot(density(log(result8[[2]])), xlim=c(11,18))
+abline(v=log(result8[[1]]))
+dev.off()
+
+
+#lncRNA
+lncRNA<-read.table("~/RDIP1/hektracks/lncRNA.bed", stringsAsFactors=F)
+result10<-bed_boot_scoot(bed1=IMR90, bed2=lncRNA)
+> result10
+[[1]]
+[1] 6064533
+[[2]]
+  [1] 5682111 5638861 5804930 5928100 5557904 5859449 5773586 5812102 5876310
+ [10] 5714381 5975355 5706422 5645832 5879923 5916117 5703787 5714903 5761704
+ [19] 5983805 5885971 5792164 5773520 5834925 5797192 5655480 5737179 6101587
+ [28] 5663385 5694394 5804031 5810448 5744943 5880666 5880167 5935790 5683375
+ [37] 5672970 5785491 6026645 5847837 5914867 5987617 5610594 5689682 5935158
+ [46] 5904430 5904830 6125435 5658163 5712537 5674750 5948026 5843771 5686819
+ [55] 5821759 5660338 5814520 6092655 5682938 5799921 5774255 5889914 5749426
+ [64] 5683813 5648466 5774998 5748396 5973331 5978835 5750624 5831872 5846267
+ [73] 5830276 5763936 5759098 5739443 5901357 5948072 5545107 6017804 6017431
+ [82] 5789393 5718496 5785507 5801226 5850637 5972820 5793213 5905657 5941336
+ [91] 5462944 5842049 6147107 5731652 5660845 5777303 5751595 6000015 5955620
+[100] 5804320
+pdf("~/LNCRNANucleotideCountPermTest.pdf")
+plot(density(log(result10[[2]])), xlim=c(11,18))
+abline(v=log(result10[[1]]))
+dev.off()
+
+
+#SINE Repeats
+SINERepeats<-subset(Repeats, Repeats[,4]=="SINE")
+result11<-bed_boot_scoot(bed1=IMR90, bed2=SINERepeats)
+> result11
+[[1]]
+[1] 3984790
+[[2]]
+  [1] 5073246 4966892 5040626 4978803 5011125 5047132 5040188 5064081 4994049
+ [10] 4999892 5039960 5035717 5018712 4973287 5044544 4982123 5019189 5044391
+ [19] 4943299 5055565 5005466 5042443 4979180 5070234 5024974 5031237 5029576
+ [28] 5037578 5058744 4950153 5015753 5008102 5052286 5060494 5110366 5031247
+ [37] 5080289 4978281 5012345 5034706 5013945 5004431 4995255 5028794 5061281
+ [46] 4988026 5014309 5109769 5026428 5048827 5029438 5040972 4987626 5075286
+ [55] 4986372 5063052 5014784 5028259 5063194 5053215 5014527 5032466 5049686
+ [64] 5076674 5063281 5038726 5053675 4998418 5039629 4976728 5075667 5069459
+ [73] 5060837 5039128 5072539 5037698 5036132 4991042 5037612 5051509 5014837
+ [82] 4989174 5045194 5000800 4998551 4993819 4966377 5039001 5086315 5062789
+ [91] 5009830 4988094 5034136 5074795 5021482 4978897 5022209 5026508 5052882
+[100] 5053929
+pdf("~/SINERepNucleotideCountPermTest.pdf")
+plot(density(log(result11[[2]])), xlim=c(11,18))
+abline(v=log(result11[[1]]))
+dev.off()
+
+
+#Promoters
+Prom4kb<-cbind(RefSeq[,1], RefSeq[,2]-2000, RefSeq[,2]+2000, RefSeq[,4:6])
+result12<-bed_boot_scoot(bed1=IMR90, bed2=Prom4kb)
+> result12
+[[1]]
+[1] 2868500
+[[2]]
+  [1] 2007771 1956727 1920028 2093034 2002981 2001568 1942664 1955510 1991998
+ [10] 2008091 1927885 2008234 1993904 2018548 1975291 1951081 2052182 2011095
+ [19] 1957839 1956514 2051327 2069886 1855291 1991172 1999100 1892044 2038094
+ [28] 2073106 1975620 1922117 2074846 1949952 1873511 1986798 1968678 1948612
+ [37] 1937066 1901762 1827482 1908862 1868539 1892639 1829223 1908169 2010832
+ [46] 1900635 1994621 2002686 1983060 1882143 1980244 1956348 2051348 1942737
+ [55] 2065210 1923912 1916542 1914210 1951808 1949633 2087940 1916606 1824135
+ [64] 1920555 2075604 1942486 1920033 1863697 2041069 2026729 1995769 1998686
+ [73] 1929000 1949149 2021719 2007552 1873278 2077254 2003410 1940281 2120896
+ [82] 1927732 1981106 2007968 2086253 2033933 2002303 1969994 2114399 1934502
+ [91] 1998142 1991337 1984258 1929857 2021470 1991094 1927340 1889054 1959334
+[100] 1877797
+pdf("~/PromoterNucleotideCountPermTest.pdf")
+plot(density(log(result12[[2]])), xlim=c(11,18))
+abline(v=log(result12[[1]]))
+dev.off()
+
+
+#Intergenic Space
+Intergenic<-read.table("~/RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed", stringsAsFactors=F)
+result13<-bed_boot_scoot(bed1=IMR90, bed2=Intergenic)
+> result13
+[[1]]
+[1] 17824359
+[[2]]
+  [1] 18412718 18570117 18472158 18713584 18657298 18473610 18481251 18635626
+  [9] 18379540 18436180 18469384 18542975 18400354 18361974 18436030 18624974
+ [17] 18683794 18417265 18540853 18531439 18371567 18493217 18583838 18456331
+ [25] 18436774 18551953 18395044 18575827 18628955 18610239 18401248 18559507
+ [33] 18422193 18328195 18269904 18497394 18547736 18376304 18499686 18453348
+ [41] 18413849 18475417 18436630 18486943 18509981 18406773 18484423 18484126
+ [49] 18502771 18399520 18346357 18476768 18648819 18477717 18627434 18388857
+ [57] 18439698 18509174 18443740 18375576 18416278 18516398 18572288 18560436
+ [65] 18544596 18509744 18409587 18591147 18351843 18432069 18483808 18499752
+ [73] 18456535 18391680 18311151 18365603 18278291 18595961 18487002 18567096
+ [81] 18356590 18513034 18418607 18512586 18586301 18493792 18440069 18382123
+ [89] 18561689 18323182 18458104 18571464 18564470 18601344 18412713 18466019
+ [97] 18563550 18537041 18602412 18508864
+pdf("~/IntergenicNucleotideCountPermTest.pdf")
+plot(density(log(result13[[2]])), xlim=c(11,18))
+abline(v=log(result13[[1]]))
+dev.off()
+
+(log(mean(result2[[2]]))-3)
+(log(mean(result2[[2]]))+3)
+
+pdf("~/RepeatMaskerPermtest1.pdf")
+par(mfrow=c(4,1))
+plot(density(log(result2[[2]])), xlim=c((log(mean(result2[[2]]))-3),(log(mean(result2[[2]]))+3)), xlab="LowComplex")
+polygon(density(log(result2[[2]])), col="gray", border="gray")
+abline(v=log(result2[[1]]), lwd=2, col="red")
+plot(density(log(result1[[2]])), xlim=c((log(mean(result1[[2]]))-3),(log(mean(result1[[2]]))+3)), xlab="LINE")
+polygon(density(log(result1[[2]])), col="gray", border="gray")
+abline(v=log(result1[[1]]), lwd=2, col="red")
+plot(density(log(result3[[2]])), xlim=c((log(mean(result3[[2]]))-3),(log(mean(result3[[2]]))+3)), xlab="DNARep")
+polygon(density(log(result3[[2]])), col="gray", border="gray")
+abline(v=log(result3[[1]]), lwd=2, col="red")
+plot(density(log(result6[[2]])), xlim=c((log(mean(result6[[2]]))-3),(log(mean(result6[[2]]))+3)), xlab="LTRRep")
+polygon(density(log(result6[[2]])), col="gray", border="gray")
+abline(v=log(result6[[1]]), lwd=2, col="red")
+dev.off()
+pdf("~/RepeatMaskerPermtest2.pdf")
+par(mfrow=c(3,1))
+plot(density(log(result7[[2]])), xlim=c((log(mean(result7[[2]]))-3),(log(mean(result7[[2]]))+3)), xlab="SatRep")
+polygon(density(log(result7[[2]])), col="gray", border="gray")
+abline(v=log(result7[[1]]), lwd=2, col="red")
+plot(density(log(result11[[2]])), xlim=c((log(mean(result11[[2]]))-3),(log(mean(result11[[2]]))+3)), xlab="SINE")
+polygon(density(log(result11[[2]])), col="gray", border="gray")
+abline(v=log(result11[[1]]), lwd=2, col="red")
+plot(density(log(result8[[2]])), xlim=c((log(mean(result8[[2]]))-3),(log(mean(result8[[2]]))+3)), xlab="SimpleRep")
+polygon(density(log(result8[[2]])), col="gray", border="gray")
+abline(v=log(result8[[1]]), lwd=2, col="red")
+dev.off()
+
+
+pdf("~/GeneBodiesPermtest.pdf")
+par(mfrow=c(5,1))
+plot(density(log(result4[[2]])), xlim=c((log(mean(result4[[2]]))-3),(log(mean(result4[[2]]))+3)), xlab="CpGIslands")
+polygon(density(log(result4[[2]])), col="gray", border="gray")
+abline(v=log(result4[[1]]), lwd=2, col="red")
+plot(density(log(result5[[2]])), xlim=c((log(mean(result5[[2]]))-3),(log(mean(result5[[2]]))+3)), xlab="RefSeq")
+polygon(density(log(result5[[2]])), col="gray", border="gray")
+abline(v=log(result5[[1]]), lwd=2, col="red")
+plot(density(log(result12[[2]])), xlim=c((log(mean(result12[[2]]))-3),(log(mean(result12[[2]]))+3)), xlab="Promoters")
+polygon(density(log(result12[[2]])), col="gray", border="gray")
+abline(v=log(result12[[1]]), lwd=2, col="red")
+plot(density(log(result13[[2]])), xlim=c((log(mean(result13[[2]]))-3),(log(mean(result13[[2]]))+3)), xlab="Intergenic")
+polygon(density(log(result13[[2]])), col="gray", border="gray")
+abline(v=log(result13[[1]]), lwd=2, col="red")
+plot(density(log(result10[[2]])), xlim=c((log(mean(result10[[2]]))-3),(log(mean(result10[[2]]))+3)), xlab="LNCRNA")
+polygon(density(log(result10[[2]])), col="gray", border="gray")
+abline(v=log(result10[[1]]), lwd=2, col="red")
+dev.off()
+
+
+save.image("~/PermTest.RData")
+load("~/PermTest.RData")
+
+
+
+##Those nucleotide count intersects between RDIP peaks and genomic feature that were measured to be significant with 100 permutations
+##were then also checked for significance at 1000 permutations using the same method, adjusting the following line of script:
+#bed_boot_scoot<-function(bed1, bed2, n.iter=100){
+#to
+#bed_boot_scoot<-function(bed1, bed2, n.iter=1000){
+
+
+
+#HEKPeaks
+HEK<-read.table("~/SecondStrandCounts/HEKminus10", stringsAsFactors=F)
+> nrow(HEK)
+[1] 34946
+> nrow(IMR90)
+[1] 57308
+resultHEK<-bed_boot_scoot(bed1=IMR90, bed2=HEK)
+> resultHEK
+[[1]]
+[1] 15780929
+
+[[2]]
+   [1] 300622 324116 317768 328767 310443 342524 331020 352608 352855 322695
+  [11] 329411 329428 319489 354396 305220 330289 336528 352130 327999 320933
+  [21] 336339 334403 334543 335515 328626 337123 328378 327184 340608 322025
+  [31] 308412 327033 337502 342536 327735 323606 335151 320650 323102 338340
+  [41] 340404 334858 330449 339197 330167 336633 336668 322877 336091 334432
+  [51] 323980 322667 326507 318438 311245 317874 343234 328291 332430 331140
+  [61] 332064 315661 333014 324739 331389 352492 308760 344994 322214 338368
+  [71] 330898 328242 318139 333433 337362 314281 314213 338380 320229 334517
+  [81] 330995 343110 339879 322610 331353 312875 304151 311298 341010 321284
+  [91] 332381 333849 337353 335223 324403 313204 313019 315931 345194 324723
+ [101] 325979 321265 332524 317546 318816 323027 327960 333172 358613 340371
+ [111] 323417 318969 323201 334572 326350 330713 328181 332993 350569 350859
+ [121] 335329 305179 347121 342232 326039 325084 332594 352411 366723 326197
+ [131] 339772 325957 365816 333359 344632 327362 353828 315421 341045 321752
+ [141] 338723 343266 309387 319325 318861 344298 313107 334717 324908 330669
+ [151] 341887 323879 335367 339796 318361 326649 318046 337212 333538 289772
+ [161] 330747 326247 332277 357111 325277 354961 322656 319062 351318 321207
+ [171] 331383 335305 326892 322243 340462 344954 339558 346875 347026 305319
+ [181] 318916 331422 319444 326482 323001 336455 345756 344480 325989 332111
+ [191] 329612 321103 325001 324508 324354 324024 358598 350717 316939 323948
+ [201] 303924 345477 321519 321576 351392 321013 321503 339029 318738 312284
+ [211] 307608 315684 342893 314755 334387 321032 317112 344986 339052 324136
+ [221] 346981 349616 342591 323209 345837 319461 348109 330335 331285 353350
+ [231] 340059 330248 338808 309759 318266 341681 313594 343236 344451 356354
+ [241] 345407 332626 347116 323803 298160 312538 319277 367068 327400 316559
+ [251] 308884 332901 318629 327905 330441 311466 308325 342812 325634 315712
+ [261] 330152 335311 335876 304367 333208 313410 342255 316659 348242 344643
+ [271] 328208 326090 341620 313883 348722 318063 325963 338556 309511 310578
+ [281] 348540 320509 358016 316206 333069 340175 319690 341904 358114 294839
+ [291] 326690 328413 320227 308323 352261 329572 329771 319509 319062 336617
+ [301] 327404 317155 330612 333097 323996 305592 337607 317806 335624 341215
+ [311] 329676 328160 308220 316404 356902 322611 344250 326824 338743 325750
+ [321] 343630 335205 337349 314598 318664 327870 346407 329246 349438 354222
+ [331] 313504 319486 326516 341064 346862 326039 331143 305532 314010 351214
+ [341] 335036 325630 338661 337586 321711 330334 331272 341690 328986 332092
+ [351] 342136 342506 323981 324835 323519 314709 335195 321703 328767 322203
+ [361] 331568 324211 361500 342138 325607 335593 329192 307571 327588 327595
+ [371] 341270 313566 328541 338511 327372 315947 330949 329802 315774 330593
+ [381] 336644 327864 332495 320252 317458 303228 318725 331041 332817 342928
+ [391] 328533 349822 315091 320548 348487 316328 323269 334165 342078 319064
+ [401] 318136 340747 351791 346589 335935 318838 321215 328565 321910 326932
+ [411] 356684 314974 333307 322331 341371 345106 318444 309670 332674 329218
+ [421] 316179 323025 322149 323166 326586 328906 340412 316621 323341 326124
+ [431] 341646 340826 329068 334308 328955 328160 326989 338068 320535 317095
+ [441] 344417 313326 330217 349199 331220 345126 320220 345095 312816 316918
+ [451] 331061 319727 316704 326717 312138 320281 313344 331652 315496 324976
+ [461] 323806 348015 342569 328319 326339 327510 310177 349275 343037 328683
+ [471] 323909 343614 311664 323161 363502 285593 316353 351480 324873 322176
+ [481] 305057 315514 313691 317924 312708 318406 333119 346708 314125 343175
+ [491] 322759 332534 315837 347247 332594 325562 340648 339613 318754 342102
+ [501] 315481 343750 334286 338971 336498 331916 327171 333308 330021 339899
+ [511] 321392 334908 338456 311486 313514 337887 323077 354937 331999 337894
+ [521] 340318 335920 324262 323499 337805 322968 318268 343353 331864 315308
+ [531] 322445 336426 313077 325492 325522 333396 342049 316811 322391 336140
+ [541] 350204 319832 317316 339316 333071 326554 328733 326323 328326 304178
+ [551] 334502 319372 339116 307777 333248 330587 304275 318365 320640 345502
+ [561] 330347 313744 331530 315258 341327 323936 332845 329317 302394 303824
+ [571] 338551 309245 341467 335389 358837 342988 335524 323373 326771 334921
+ [581] 336093 320338 341610 316438 326174 315680 351309 325743 327374 329387
+ [591] 314884 320091 335097 351241 345656 349482 336899 317834 326126 338983
+ [601] 334619 349205 326202 337131 323647 310991 317917 332145 314449 333519
+ [611] 353456 346971 336334 323930 345413 329798 319181 317465 309668 338023
+ [621] 324602 328634 341386 317657 327334 322586 334480 315063 311949 328513
+ [631] 339787 326820 363370 330727 335037 325961 306239 303210 335700 319746
+ [641] 334652 332094 331967 336649 343055 362105 343012 337862 346670 333292
+ [651] 317180 342536 323949 326633 313735 320404 318809 325513 326320 313419
+ [661] 325395 323963 343273 307836 351180 341248 323829 305423 342655 330789
+ [671] 330562 315408 329832 339767 340415 350068 326646 357882 314198 309280
+ [681] 323101 346668 338696 330360 318219 337533 336990 319539 320295 324714
+ [691] 334308 319280 328218 337279 333218 317476 330545 315503 329402 354197
+ [701] 330410 307367 340042 310701 341684 332016 319736 344898 326611 348018
+ [711] 326587 330666 325355 346560 319741 323871 327117 330160 357003 316912
+ [721] 328243 315575 317827 332470 327196 329895 325912 308472 330974 338721
+ [731] 333948 310796 343191 324674 318911 311809 344998 348001 337966 320527
+ [741] 342539 326309 297642 312612 340746 321751 318909 321730 359074 337040
+ [751] 328532 323994 339231 341373 311602 345412 317949 328141 357539 330961
+ [761] 336132 319641 310860 325829 336180 315880 340801 307460 327087 324738
+ [771] 335773 326000 332197 318429 322764 348353 306116 320423 340477 320608
+ [781] 351594 330944 330141 346935 338279 335354 339639 330192 316906 314358
+ [791] 330682 343283 331135 325737 332244 331595 324656 348401 313739 328903
+ [801] 316884 317970 345027 345676 330288 324407 342426 316628 331643 342477
+ [811] 314320 331003 347475 315805 316853 313729 325760 340222 330603 340331
+ [821] 322241 312448 335794 350100 311994 336934 324930 329848 334471 344306
+ [831] 323350 315460 306551 317495 337065 329796 349113 312660 348959 339430
+ [841] 326631 319386 319455 325671 320347 345030 319563 319932 325682 312919
+ [851] 332888 311222 326944 308477 330539 344940 308438 336520 328614 342957
+ [861] 323779 309736 308594 337602 359373 300002 327038 344150 317746 323602
+ [871] 348713 341642 341171 330280 312571 313905 340720 310156 343779 341018
+ [881] 320393 320435 322214 314359 308366 319453 326717 340802 344280 327555
+ [891] 333887 320523 344916 329241 323251 324271 318308 335455 335199 332095
+ [901] 322051 334669 337199 328783 345006 310445 325566 326527 339178 336488
+ [911] 304848 336704 338690 349301 321420 330573 349764 342854 339096 350150
+ [921] 324419 341665 332744 347627 328278 336804 327425 323779 332893 334758
+ [931] 335455 330319 330644 347067 350952 317617 326535 312254 349360 312324
+ [941] 323102 330266 336940 311821 320466 330858 340869 341795 326731 321787
+ [951] 334585 355474 334115 318829 333219 310081 325652 348049 314300 333343
+ [961] 309701 318639 342790 312085 356497 323471 326548 322691 340534 315339
+ [971] 326795 343477 349913 326073 353565 364086 337771 337209 359129 321203
+ [981] 348430 338779 336170 327235 310364 339444 333576 344002 313624 324009
+ [991] 324534 338818 337006 326955 337515 319348 355386 336773 326443 337298
+average: 329633.559
+max: 367068
+min: 285593
+pdf("~/Perm1000HEK.pdf")
+plot(density(log(resultHEK[[2]])), xlim=c((log(mean(resultHEK[[2]]))-3),(log(mean(resultHEK[[2]]))+3)), xlab="HEK")
+polygon(density(log(resultHEK[[2]])), col="gray", border="gray")
+abline(v=log(resultHEK[[1]]), lwd=2, col="red")
+dev.off()
+
+
+#DNase HS
+DNase<-read.table("~/RDIP1/hektracks/DNase.bed", stringsAsFactors=F)
+result15<-bed_boot_scoot(bed1=IMR90, bed2=DNase)
+> result15
+[[1]]
+[1] 1306698
+
+[[2]]
+   [1] 682322 679014 670932 693620 686365 676529 686602 710240 707064 692875
+  [11] 659608 682675 691460 690187 718434 714355 674014 686669 700039 637560
+  [21] 716529 675380 671443 692587 694897 720381 657688 674340 703823 709233
+  [31] 662767 661487 702321 665369 666661 683399 678678 689986 644784 686089
+  [41] 681831 677646 700860 684252 666894 673771 683708 709244 668439 683189
+  [51] 696405 710610 649676 663649 687193 726925 691109 675985 677648 666991
+  [61] 693956 670338 684375 684424 666901 705466 662262 691186 678887 695478
+  [71] 673738 675695 700999 682433 677807 678735 680247 691670 684350 679927
+  [81] 685607 716332 670226 685954 679866 694493 710005 692273 656161 701203
+  [91] 683546 697442 702299 653832 652333 714391 672015 693633 676376 702586
+ [101] 664678 702279 675954 667786 675685 648901 672989 674294 664451 694777
+ [111] 663552 664223 663968 671993 657768 639977 668688 687018 657357 691429
+ [121] 678520 684306 692066 680619 710593 680251 708461 689601 682550 694466
+ [131] 702408 672895 660856 667456 680232 688139 679704 669076 669761 705717
+ [141] 664767 713292 683332 685980 696771 705618 675211 667365 654945 684166
+ [151] 672652 650754 716125 684242 689935 650089 656041 702743 664599 675657
+ [161] 718277 678397 668103 680232 664803 669920 663904 679252 718286 693385
+ [171] 670661 717326 705178 694599 674256 697498 683053 674395 688920 655098
+ [181] 694451 689232 714210 684624 698661 700245 697169 677396 704564 659599
+ [191] 674126 668282 691252 669756 683019 664733 663867 703330 683222 692914
+ [201] 645223 663081 685049 680813 696511 690132 707022 688601 651544 649123
+ [211] 678273 688529 676231 670376 660399 683715 699082 668760 700648 703213
+ [221] 689871 690220 707227 684642 678573 663165 676973 663905 679727 662175
+ [231] 707765 670029 681597 677077 666780 672316 690705 659208 659114 684737
+ [241] 680483 728920 682277 663412 654563 660555 691541 674347 711643 676041
+ [251] 693232 698292 665816 697224 684101 655751 709698 673196 653500 700393
+ [261] 677832 666467 659209 679717 675671 696572 637723 709996 657283 679941
+ [271] 690934 672758 700388 687417 671129 688896 704102 708592 694745 665939
+ [281] 653878 704140 675222 702163 668051 676121 703913 664926 683440 703334
+ [291] 682200 680090 706031 709860 666612 698448 696275 679740 680127 677968
+ [301] 679449 646945 699108 653919 684934 663101 692619 677095 681631 705585
+ [311] 701081 719389 674545 681419 685058 650475 688674 672537 685214 655566
+ [321] 676159 703487 663240 682380 655264 679366 699574 683765 683713 674623
+ [331] 704377 663193 693985 705458 693763 646283 678761 696199 679760 683896
+ [341] 697727 722116 677883 662341 666579 719463 723240 666092 680794 673539
+ [351] 672731 685982 680798 669821 662184 688905 684795 689449 734923 722886
+ [361] 714520 673500 695893 708801 679129 709653 674868 669753 681304 682744
+ [371] 673635 684646 679321 695812 693589 701642 666257 692311 693164 674310
+ [381] 683469 683703 699898 694206 688891 650360 696121 695044 706965 678534
+ [391] 677710 663997 678732 666962 681160 710694 663389 688144 677705 695377
+ [401] 668406 696660 728782 697759 685318 678320 686419 657616 694249 724505
+ [411] 703957 667647 675347 668566 669627 665502 688261 656950 698052 687098
+ [421] 707678 700491 695986 690303 687076 683754 684302 674814 652498 711283
+ [431] 691366 687474 689000 713039 664322 664918 674100 674206 696151 712174
+ [441] 676915 709982 677939 688743 702893 667676 684058 721475 694422 693088
+ [451] 700663 690608 696109 680190 699373 693845 717628 717348 679582 684659
+ [461] 669031 687620 702201 712032 689648 681770 687652 669324 676142 662820
+ [471] 689744 689944 682954 667641 660878 654138 669201 730556 692557 692353
+ [481] 663664 667897 693493 694663 665100 683906 690319 713859 697176 671836
+ [491] 664363 691221 686434 679341 682688 701561 672002 683594 696600 696553
+ [501] 702627 698281 669743 663488 684034 682364 666273 678378 693698 677397
+ [511] 681957 691794 674212 642938 730090 677968 664356 670509 697855 684217
+ [521] 678926 632607 687920 642748 704832 668169 688324 664128 696792 687305
+ [531] 684957 659571 672036 648703 711299 676953 683778 673253 643984 656289
+ [541] 687320 661756 690696 682589 673197 706072 670642 697930 686266 678903
+ [551] 691298 681434 702472 730585 709287 700245 665345 679817 684477 678403
+ [561] 691252 702693 676864 689722 684684 701139 676872 688212 703993 673925
+ [571] 707925 679081 669312 669949 682060 690861 685422 679379 659525 695789
+ [581] 652566 704804 663310 656710 697205 667163 669239 671177 668719 675992
+ [591] 679757 698187 650117 657088 706272 684200 699898 687580 693750 672056
+ [601] 684756 677958 663277 661722 661110 683479 696580 705475 695445 651762
+ [611] 706299 667853 669173 668087 684643 684530 664324 662233 685846 692065
+ [621] 693525 683910 670446 676555 704387 681611 689673 661315 645065 691546
+ [631] 664291 706562 684659 684757 682475 691486 730969 681806 680549 689000
+ [641] 681823 706968 674730 699879 684783 661043 688026 665967 703019 678344
+ [651] 703208 677585 680988 660298 684788 707513 695399 654219 697526 676239
+ [661] 690767 718180 695964 680979 661003 708077 680175 671767 691386 674568
+ [671] 650266 693354 676096 681548 694163 670058 723061 693029 719705 680109
+ [681] 669372 692287 657909 698395 685380 692817 697798 669360 655680 657008
+ [691] 686771 659237 667833 687976 703446 690132 674742 664770 669480 689733
+ [701] 698813 676079 679379 657634 669622 683715 692853 682587 694356 691596
+ [711] 703056 668245 686539 687607 694033 688225 666483 682297 686389 678588
+ [721] 656024 704506 693568 670352 700098 672786 670465 638912 684542 662069
+ [731] 709807 667243 667837 692720 685947 683855 674254 698915 669222 683469
+ [741] 689015 695869 704564 666002 699987 682118 692308 722524 684726 709638
+ [751] 678966 682833 662052 682963 675076 708747 699586 671727 695549 690035
+ [761] 652245 705927 688709 703590 702971 684714 682973 683450 671388 677022
+ [771] 730663 700761 687328 674436 708424 681662 705380 676582 670704 683735
+ [781] 697696 689275 731960 676400 649150 666032 688368 674966 707227 691801
+ [791] 711425 685461 685606 691805 688645 685342 687797 706686 665073 663277
+ [801] 689979 691970 677766 716957 721786 706999 671632 685160 696583 672149
+ [811] 675400 665417 692096 684033 685846 681529 669451 704099 667496 674553
+ [821] 683715 670557 673896 706218 669228 680195 680319 704936 737231 669702
+ [831] 670390 670610 658785 665969 674382 655849 672519 671387 656530 672609
+ [841] 648184 676915 700007 674894 665736 677148 643695 703216 665767 710986
+ [851] 675578 686425 674967 694817 688917 706346 653273 687652 674167 673285
+ [861] 704065 677073 694236 669604 714649 678489 718656 710683 668906 669452
+ [871] 664770 658126 694555 661897 701106 684658 664422 692637 682955 666209
+ [881] 671519 679912 691245 691277 724329 663477 706021 662713 710391 685498
+ [891] 695023 689322 684005 674681 670141 682665 688262 679748 715269 668207
+ [901] 679233 667423 675571 694635 657953 667082 690102 710293 686760 690888
+ [911] 660262 691792 713774 707801 679652 693489 672871 671696 706401 683606
+ [921] 687852 686613 683771 680298 683321 663438 673701 686873 679896 687014
+ [931] 691992 652211 673226 657771 665631 702402 663532 702496 659593 672981
+ [941] 678273 670426 668660 689164 701560 680928 694889 669523 690232 684353
+ [951] 663510 680358 673858 674494 661867 714200 675009 665625 677083 673139
+ [961] 666727 665870 656635 672718 657849 681387 683182 693049 683203 699253
+ [971] 692081 677107 673412 666581 663984 711851 688646 701759 666506 674718
+ [981] 673389 669059 703528 686005 687291 684814 686588 694160 673223 691318
+ [991] 714220 656828 683177 655409 680113 661099 694285 693316 689780 649072
+pdf("~/Perm1000DNase.pdf")
+plot(density(log(result15[[2]])), xlim=c((log(mean(result15[[2]]))-3),(log(mean(result15[[2]]))+3)), xlab="DNase")
+polygon(density(log(result15[[2]])), col="gray", border="gray")
+abline(v=log(result15[[1]]), lwd=2, col="red")
+dev.off()
+
+
+#LowComplexityRepeats
+lowcomplex<-subset(Repeats, Repeats[,4]=="Low_complexity")
+result2<-bed_boot_scoot(bed1=IMR90, bed2=lowcomplex)
+> result2
+[[1]]
+[1] 2841530
+
+[[2]]
+   [1] 220805 222928 221057 223591 219949 225455 222019 224064 222555 216977
+  [11] 216803 220635 231432 216477 234349 221266 221576 226763 219376 222293
+  [21] 221264 225219 218076 222928 224125 222581 221747 223608 230448 218458
+  [31] 215366 222872 225576 223359 218856 223990 221356 222070 230108 231861
+  [41] 212823 224968 221586 217849 224773 226080 226302 222240 216242 225591
+  [51] 225249 219843 220760 220624 219724 221625 225692 220427 228601 229642
+  [61] 220129 217671 232641 220919 222109 225211 220681 213059 223137 228509
+  [71] 223840 222626 218123 223058 224394 217346 233101 218693 222727 221876
+  [81] 225156 215149 224515 225661 218055 226095 223996 222521 226121 219107
+  [91] 218311 228993 225321 224031 218297 226695 231351 221032 219964 217190
+ [101] 221790 225558 223042 211905 217800 213122 218785 222614 222780 225291
+ [111] 223534 218931 226157 214354 216847 221888 219380 223145 231128 227203
+ [121] 226249 224835 223382 228056 220124 225295 220352 223119 222003 227699
+ [131] 222917 223150 226662 222279 226098 218318 227939 220690 222745 215790
+ [141] 228713 223414 221183 216633 213502 222257 220782 223108 217911 223768
+ [151] 222794 223041 217872 217300 220197 223124 227991 229521 224513 222666
+ [161] 217663 224418 224449 222098 223877 225019 220518 227980 225685 220677
+ [171] 226366 223992 222416 229503 217881 221234 222947 213387 223961 229234
+ [181] 215085 218000 217538 229662 220320 220302 227673 219124 220794 229905
+ [191] 218098 220395 222514 216636 225900 226153 227969 224614 215354 222181
+ [201] 225392 223466 234762 223509 218257 218494 223753 217303 224655 217339
+ [211] 225956 221194 216190 223831 221019 213439 219532 225492 227487 221361
+ [221] 225891 221299 228225 232682 224583 215604 221636 229008 217933 221312
+ [231] 225224 223926 224150 221237 225982 219141 219120 221790 237930 218470
+ [241] 236729 220537 224646 227447 220691 228058 223261 220502 222098 217176
+ [251] 214436 218551 222900 218689 221444 223108 223221 221531 221196 228482
+ [261] 217392 218852 221509 227161 229075 213535 226095 216145 220348 227752
+ [271] 217527 217939 231142 221159 219857 222802 217747 220242 219887 224820
+ [281] 222417 231496 216388 218718 225266 221332 218003 218918 226292 223745
+ [291] 227125 222916 223413 227614 219599 225123 222466 215628 224972 212659
+ [301] 226167 222915 219308 217191 220080 227528 218494 221481 221918 223952
+ [311] 217397 225423 218173 221765 223002 212581 227349 222239 219301 223051
+ [321] 227732 218565 225362 226686 225833 220561 221705 223477 215277 220049
+ [331] 218446 216240 219658 218267 219009 218082 223670 221443 225096 221525
+ [341] 214308 229429 216595 221894 225544 222523 224537 220152 221470 220307
+ [351] 217413 225951 224516 224869 223719 227050 220527 213801 224280 226305
+ [361] 220337 226777 225225 226770 218514 215660 226339 218134 227859 227561
+ [371] 221038 221920 227430 221221 225322 218644 224198 229157 223778 225809
+ [381] 225511 216705 231597 229724 228850 225064 214070 221772 222838 223482
+ [391] 218276 223780 226324 218703 218386 215759 223250 221588 214094 222389
+ [401] 220452 222929 227480 226387 229556 225897 227773 222609 220732 218150
+ [411] 221483 227889 223567 219760 229702 230549 228294 222469 230261 229395
+ [421] 219675 222560 231392 215989 227934 220544 222557 213845 220424 217324
+ [431] 220710 227770 228956 220417 217939 222668 231825 229121 214409 212489
+ [441] 223002 231202 226716 222183 218569 227379 217309 225383 221393 217653
+ [451] 228728 218078 220872 223281 219661 222312 217825 220854 219678 223384
+ [461] 225555 219639 218039 224287 224570 222433 232391 227028 231654 224720
+ [471] 220253 227298 229070 219609 223447 221995 227448 216771 219752 224991
+ [481] 223652 220148 228290 229651 224508 220986 216207 223472 218608 224797
+ [491] 216906 230182 219500 229007 224862 222077 219765 223794 223188 222293
+ [501] 224861 222097 211046 222466 222960 228403 226562 223744 222813 224106
+ [511] 222202 217148 223326 216208 223927 229740 218452 222971 221030 218670
+ [521] 223228 226285 221135 221541 218320 220000 218871 224447 225340 221733
+ [531] 223220 227392 218913 224016 224401 227625 228335 221353 226586 221685
+ [541] 226206 224162 218086 220541 221414 225083 219981 222802 221540 214355
+ [551] 220005 223506 227962 218206 224320 228988 220943 225226 219127 222098
+ [561] 224955 223423 221888 221232 229644 220436 220439 222433 223593 223061
+ [571] 221071 223327 225206 223316 224069 221342 218771 223106 217412 219735
+ [581] 226365 225679 224177 225088 225286 224825 217592 233469 216874 226139
+ [591] 217310 221752 223575 218374 226624 226844 223739 232119 217880 218118
+ [601] 224126 222886 235022 221283 218105 223805 223452 229384 216947 221544
+ [611] 223532 210324 224151 227774 224675 221028 223016 227870 221345 223158
+ [621] 225607 226236 226403 221670 223289 215621 224591 217686 219039 222784
+ [631] 218352 221692 225276 215094 217760 227270 225548 220348 224323 228189
+ [641] 224901 217201 215548 230129 223670 220099 218096 221171 223285 215596
+ [651] 222821 223343 219266 219857 224273 212770 225254 222760 221825 218614
+ [661] 230728 218147 219517 223172 232682 227754 227158 219973 223763 224911
+ [671] 228220 218266 220663 214543 224885 220424 229571 230794 221529 219474
+ [681] 219356 214570 215344 228698 221939 218720 225087 227288 221033 229647
+ [691] 229180 219720 213971 231708 224755 219319 224538 218678 222524 223505
+ [701] 218337 229088 217358 233529 228851 222580 221065 220661 224089 227348
+ [711] 224776 224927 227930 230413 220735 217777 221718 228791 219515 227700
+ [721] 227548 230207 213509 221760 229037 217700 221284 229667 230241 217013
+ [731] 226829 223002 221151 226832 224422 233153 222695 224290 216016 225707
+ [741] 221163 219540 231195 227115 226591 216375 230850 224125 226510 226405
+ [751] 221218 228945 224977 230662 218333 222074 225293 216943 226373 221324
+ [761] 225124 228048 223748 223608 223368 218730 226502 220883 221825 217039
+ [771] 219527 230869 222336 223164 226213 227115 221781 219405 222889 218564
+ [781] 223014 217282 226354 225354 216669 227433 227898 226701 221294 223083
+ [791] 222906 216333 217301 225731 232454 220135 222471 231011 230209 224425
+ [801] 221157 217463 221257 226272 220808 221378 221951 228202 217575 217785
+ [811] 219998 213387 224295 215761 220449 219643 223836 225309 225613 220719
+ [821] 222774 221229 221008 220688 227695 225474 225267 222571 226509 223349
+ [831] 228807 220932 213187 223119 218422 231838 227060 221923 227621 228299
+ [841] 224475 228637 230387 222484 219354 216272 229459 225091 228545 222872
+ [851] 219176 226281 227830 221090 222520 222142 233421 219777 218229 216550
+ [861] 224698 224066 222882 225933 214351 218677 226867 217648 228906 224595
+ [871] 220727 220898 213003 225106 212867 222918 228441 229679 219717 220750
+ [881] 219556 214617 226950 227603 224087 221352 228026 227874 225248 219554
+ [891] 217726 222348 221996 221747 222812 218983 237799 222558 224090 212854
+ [901] 219410 225290 223792 230475 216396 224497 221813 218835 227421 228666
+ [911] 222851 227115 222168 230558 217703 216618 220607 223998 224759 217300
+ [921] 216963 222980 225987 220399 225785 218471 224914 226156 222837 217913
+ [931] 227483 221638 216658 218716 216229 217876 219949 219988 218314 224777
+ [941] 229650 227661 226745 219659 222109 224263 228982 221317 226232 217555
+ [951] 218295 217344 221764 224624 227350 219650 223136 220105 214907 223319
+ [961] 219772 224648 225537 224687 228195 223927 224457 218710 218385 226443
+ [971] 221503 213647 219109 218797 224911 213099 223126 220690 231485 219674
+ [981] 222282 219014 219347 218566 220446 226056 226609 221654 223125 221684
+ [991] 223141 236487 212869 226275 225194 220041 219298 223986 224892 225979
+
+pdf("~/Perm1000test.pdf")
+plot(density(log(result2[[2]])), xlim=c((log(mean(result2[[2]]))-3),(log(mean(result2[[2]]))+3)), xlab="LowComplex")
+polygon(density(log(result2[[2]])), col="gray", border="gray")
+abline(v=log(result2[[1]]), lwd=2, col="red")
+dev.off()
+
+#SimpleRepeats
+Simple_repeat<-subset(Repeats, Repeats[,4]=="Simple_repeat")
+result8<-bed_boot_scoot(bed1=IMR90, bed2=Simple_repeat)
+> result8
+[[1]]
+[1] 2994232
+[[2]]
+   [1] 325007 336851 320444 329036 326654 323452 317316 320355 329497 326750
+  [11] 335861 332969 329150 327170 327037 334033 322851 326625 328342 319691
+  [21] 333356 329225 320457 323489 333207 327969 331104 308581 325474 327099
+  [31] 339673 337798 326144 318265 330673 317160 320767 335012 329397 329738
+  [41] 330710 328734 331253 316517 322239 317856 325118 332168 327479 328253
+  [51] 317899 331253 338318 323837 322293 328266 330394 328664 324603 325366
+  [61] 325278 325592 334729 323641 318343 339742 331582 325886 319842 327402
+  [71] 345810 327411 325578 331062 327454 322780 332631 324061 322979 317810
+  [81] 330757 327802 324506 319571 319221 334721 330317 324680 335872 345349
+  [91] 325670 336202 323949 327578 331393 335817 347253 327540 329383 339273
+ [101] 328611 316267 330042 327496 330067 325663 334821 335076 328883 332341
+ [111] 337964 315570 336149 326909 336228 337393 342916 340316 323054 333441
+ [121] 333078 319434 316700 338195 325363 337218 333006 322041 328064 326099
+ [131] 331305 333959 329159 343095 327118 337468 331367 313633 327282 325471
+ [141] 345548 330006 327449 331212 319673 328230 336002 318055 322735 331271
+ [151] 330651 333096 328705 324780 334743 328488 332005 322299 335797 331079
+ [161] 328614 332931 328348 327949 322286 332820 334580 318762 333916 337312
+ [171] 335523 324137 320535 343690 321763 326647 338277 335094 336443 332255
+ [181] 331513 327823 338258 331294 339695 329823 342664 316775 339307 332246
+ [191] 332231 326016 325947 325632 317350 330969 323528 334041 328404 337786
+ [201] 321333 329435 323431 339773 337172 326764 323515 321024 335864 330714
+ [211] 328257 334171 313641 327126 323564 351832 315296 317068 350008 324943
+ [221] 326530 329557 336402 334006 331167 334199 334041 329847 334755 324593
+ [231] 318420 316878 334579 343844 321003 325947 323394 329615 333654 324959
+ [241] 310941 324561 315909 335909 329840 318029 335228 325875 323662 337887
+ [251] 324830 322849 320983 326906 334761 337669 338004 325209 328124 314181
+ [261] 328296 328117 313717 327923 328679 325074 331777 326246 327282 334544
+ [271] 316864 323313 346383 337247 333309 332003 316289 330259 329099 328535
+ [281] 338516 323538 333132 324098 326894 317927 309598 318893 327569 324462
+ [291] 332158 331474 316447 332137 329861 333538 332077 328265 317730 330901
+ [301] 345601 327814 328665 333829 338652 316041 322960 335271 314274 334245
+ [311] 323763 329982 324071 331720 326266 327764 322264 333423 324971 343481
+ [321] 328465 332354 333632 335660 328737 327485 336834 334149 339246 320720
+ [331] 323830 338829 320437 324976 324956 330361 322402 333559 312469 339208
+ [341] 321275 333766 338750 336708 336402 328415 346883 323750 322129 329621
+ [351] 337642 313742 327513 318219 326572 315992 328393 335194 346158 334540
+ [361] 330789 325312 323977 324978 329951 339058 337849 323067 326518 326317
+ [371] 338519 335998 332120 333778 339782 318456 315186 337752 335755 333507
+ [381] 340512 318055 322735 338205 325438 312974 331022 327504 339103 338447
+ [391] 322979 328057 326857 330679 320906 339270 328872 338012 324253 327990
+ [401] 321617 327198 322220 327554 319512 328293 333993 330098 326376 336617
+ [411] 337580 341702 325614 334457 326279 325747 324796 320012 333792 334428
+ [421] 334199 340789 330925 325306 328423 328950 340533 328961 330740 335821
+ [431] 336947 327802 328503 333963 340456 343927 331654 336880 341999 323245
+ [441] 323381 329406 330063 318871 320421 321302 328230 332915 333933 334814
+ [451] 319110 314880 330888 331138 333664 326609 336334 325835 316267 337732
+ [461] 330555 312164 325648 333217 330273 331879 339172 316980 330061 333027
+ [471] 327224 332360 325207 340775 335412 328190 315217 322066 326726 339984
+ [481] 330811 322964 329327 334593 343095 329418 328415 325196 328073 326564
+ [491] 330282 327567 332591 328502 322150 346211 340275 339246 340413 323170
+ [501] 334183 324815 333375 327820 345096 318786 313556 329004 326107 329439
+ [511] 331624 329635 347022 329876 323499 346767 334901 325020 338532 322226
+ [521] 320276 318152 327826 330726 328697 338173 324128 326586 322622 333590
+ [531] 319768 329243 329099 321027 320960 324311 321757 321140 325676 312052
+ [541] 327406 331450 330648 324420 333889 331406 333880 324983 324846 323411
+ [551] 339303 329843 327501 329519 329441 328248 329970 334290 337859 330795
+ [561] 331094 343980 331280 335582 336952 314802 323502 329398 337080 329472
+ [571] 348905 333933 320593 326492 330479 332044 329449 334304 335145 326821
+ [581] 321123 336429 323601 321550 339760 334915 330712 319748 336846 338077
+ [591] 348873 326253 342993 334304 336596 332267 331049 333804 327990 332229
+ [601] 331887 330797 329363 329287 330335 348317 320052 328364 323112 340014
+ [611] 319818 332385 328520 327685 332548 331269 340980 335263 324871 332034
+ [621] 337079 315509 329735 320984 323972 326903 335253 329157 331754 326797
+ [631] 332966 347723 322592 333234 325127 337606 330333 315413 327611 330098
+ [641] 330346 342067 327125 323077 328859 319890 331479 329757 323334 323564
+ [651] 335768 326234 319288 331497 321004 336812 325432 330553 337897 330698
+ [661] 333190 324814 323796 345219 326498 322956 319632 328222 332495 321906
+ [671] 328396 331137 336837 342698 338799 342745 333653 339509 326048 313508
+ [681] 317311 335030 325505 319555 313161 321493 323061 324248 329989 331917
+ [691] 330593 314278 330013 328904 330352 321242 332403 340329 327812 311824
+ [701] 316934 328605 336541 336024 334247 335164 334462 341056 333268 320482
+ [711] 329233 332449 332890 324587 331003 315709 325766 337073 339982 316395
+ [721] 341526 324355 331684 326723 329926 346025 326139 330760 339206 324229
+ [731] 336648 322835 330425 330219 318896 327345 332434 327187 322593 327569
+ [741] 332237 329026 333519 341841 324237 327331 329504 327645 324573 318762
+ [751] 321106 323659 321456 330000 327122 344365 324237 335397 333349 327407
+ [761] 320184 321219 341178 319000 323868 316818 321120 324497 339208 339581
+ [771] 335592 324500 323411 338777 332084 337012 329655 319003 334085 335423
+ [781] 328878 331885 333194 331153 329648 312420 331952 336304 333302 328492
+ [791] 328862 324870 338345 343472 325167 326560 317123 328664 333703 330469
+ [801] 314405 330305 331683 319683 342948 334646 323344 322713 335733 336131
+ [811] 333044 324566 332054 327965 336801 320421 330524 336290 333116 332218
+ [821] 317482 324335 327180 335930 326762 335464 327572 316338 323268 331524
+ [831] 328582 331520 335513 322756 320173 316771 352744 332594 326101 332302
+ [841] 328018 322960 328888 313937 335849 327796 341338 340802 334522 322581
+ [851] 339353 331487 325734 333517 318765 316789 325128 338917 336075 330345
+ [861] 332353 337418 335289 331283 345176 319391 334655 318420 317839 332277
+ [871] 333027 335283 328037 331094 323845 327724 318855 335768 316842 335637
+ [881] 326572 319453 320341 346237 332699 335864 332876 335965 322173 318409
+ [891] 326042 323328 341591 316205 326710 337309 340585 340113 328840 329833
+ [901] 333889 332691 340024 338528 312456 328710 325631 329127 317502 325561
+ [911] 330797 336219 333473 332200 332483 337780 320698 331535 321771 315871
+ [921] 344566 324362 333006 327738 337414 320791 328809 316395 323994 324098
+ [931] 329908 340694 319511 325364 323392 326855 329354 331720 339535 345384
+ [941] 333490 326970 339794 318870 345347 319500 337493 334631 333750 324892
+ [951] 331191 324260 322869 327217 321393 329593 319548 324691 321275 333890
+ [961] 329058 325699 329757 337840 328943 335768 333321 334986 322070 327918
+ [971] 328864 329033 332942 350651 332358 326904 326607 319472 323774 323602
+ [981] 327759 327232 326171 328411 320185 332390 325167 328073 325948 339667
+ [991] 331036 331313 337482 329461 331711 331896 343361 318545 338275 321230
+pdf("~/Perm1000SimpleRep.pdf")
+plot(density(log(result8[[2]])), xlim=c((log(mean(result8[[2]]))-3),(log(mean(result8[[2]]))+3)), xlab="SimpleRep")
+polygon(density(log(result8[[2]])), col="gray", border="gray")
+abline(v=log(result8[[1]]), lwd=2, col="red")
+dev.off()
+
+
+#SatelliteRepeats
+Satellite<-subset(Repeats, Repeats[,4]=="Satellite")
+result7<-bed_boot_scoot(bed1=IMR90, bed2=Satellite)
+> result7
+[[1]]
+[1] 416786
+
+[[2]]
+   [1] 121804 134273 148619 118393 107100 150614 131476 125090 129529 125903
+  [11] 116333 129665 109296 109602 135966 117468 135664 121343 121342 130087
+  [21] 117293 126367 126389 122511 114136 129808 135714 125946 117605 125598
+  [31] 135728 113714 156856 121467 126687 138281 139734 129733 145122 138142
+  [41] 115916 118026 146970 116486 117226 125245 139992 130183 113198 129490
+  [51] 112764 140376 126452 122077 137561 141686 130184 127462 130835 129664
+  [61] 125806 135591 127965 126836 142243 123932 114434 126815 129656 133439
+  [71] 128999 122038 126611 119655 130892 133342 138981 133615 125080 151305
+  [81] 149692 125999 145820 155364 113240 126307 126082 118400 148617 127036
+  [91] 132661 138302 133454 143219 118482 120366 123726 125362 121139 144469
+ [101] 116911 126882 131875 125537 124618 114131 130504 131079 124447 126540
+ [111] 118606 129812 122319 122294 128807 112128 121018 146165 129538 123316
+ [121] 122494 120926 131408 121377 122294 127115 119734 132369 147645 114374
+ [131] 143849 120291 128822 138584 142952 114568 119281 136343 117732 111086
+ [141] 129199 126968 142955 123473 150229 120283 129807 137281 110502 126813
+ [151] 117520 138944 135990 119742 126005 119234 135668 115362 130920 137640
+ [161] 128780 129014 122683 112913 136154 124441 123793 117293 139670 132049
+ [171] 134296 137814 136779 146370 140424 137433 140122 182877 132730 132006
+ [181] 146438 114200 136093 122488 105551 120305 118848 126214 108936 115473
+ [191] 108700 137408 104475 133808 141663 129011 132170 131038 130410 133403
+ [201] 117300 126484 122615 127885 145566 141968 120281 134178 125316 125015
+ [211] 129429 133973 130026 127867 119454 118668 106941 133287 136570 130626
+ [221] 127396 131489 112146 134993 116472 131710 134646 137608 120465 124125
+ [231] 130563 137330 147377 134368 142119 139141 122164 127382 147212 113635
+ [241] 132968 129188 143581 119712 120025 135044 116412 113240 110481 115074
+ [251] 136849 127802 132294 122735 119947 128531 123507 153306 120858 119455
+ [261] 134540 106170 122803 137257 126819 142187 123692 128018 131701 122574
+ [271] 111392 124832 121322 120346 135301 125130 135550 123366 121661 147158
+ [281] 131036 140643 128493 122175 123714 103880 127255 133260 117221 137490
+ [291] 144728 145736 131548 138416 126247 140779 129750 129742 136822 138891
+ [301] 140315 125043 117998 131661 128432 128312 120854 122821 135283 132431
+ [311] 125581 113574 133896 134934 150141 121947 131546 125328 133329 130536
+ [321] 113434 119987 126898 121461 130851 117866 129466 121947 130115 123350
+ [331] 102257 124996 125721 133304 126569 141275 135314 123561 114686 106332
+ [341] 116668 129466 127803 136910 120696 126532 130309 120313 144704 153927
+ [351] 123192 116543 124969 145656 143309 117136 133518 132126 113778 134414
+ [361] 122731 133789 116398 130228 117813 145569 130263 126610 134661 128277
+ [371] 129730 128811 134739 136916 119121 132446 152627 148320 126372 135524
+ [381] 126272 113485 136217 128823 125578 115365 139906 123206 133621 124948
+ [391] 122449 130275 124630 129951 120048 127939 131111 135527 138285 111262
+ [401] 123797 130117 134725 127582 132686 107329 123874 120620 136562 127604
+ [411] 116065 125624 136023 134194 152860 133514 130473 128590 141200 132937
+ [421] 118511 132813 150743 137807 122027 145705 123486 128470 117571 133235
+ [431] 125091 117879 121608 123117 126182 133167 123275 117830 130401 122224
+ [441] 122118 124851 130164 134497 130341 134367 130005 133082 134555 120541
+ [451] 122542 127363 123870 143197 136713 138998 126437 128975 135606 124520
+ [461] 125667 121626 128446 123118 112415 120238 137055 125698 114742 126893
+ [471] 119933 128291 119214 130294 131787 128680 135040 142656 129174 127927
+ [481] 127130 131896 114128 138008 135345 113526 132788 127235 115358 119540
+ [491] 129900 130169 125785 113171 139750 138868 121781 116453 123434 137624
+ [501] 129449 126733 128156 135764 121393 132732 142199 146568 121787 131511
+ [511] 129848 119066 124809 121669 120875 132229 120912 133588 130611 115450
+ [521] 115521 129734 117436 130723 119040 132940 120313 126044 134168 102590
+ [531] 130609 130647 140956 126570 138757 118669 109814 123853 137503 121108
+ [541] 121147 114093 121897 107865 130756 126153 134526 131141 123433 120848
+ [551] 127051 115038 128508 114707 129141 123511 138924 121084 172451 125574
+ [561] 127119 134881 117703 128708 128396 126910 134857 116213 128152 131311
+ [571] 139357 143316 114543 111460 120800 142841 142715 140066 132581 193917
+ [581] 142879 110790 135829 135170 122817 132533 134190 131370 143300 130126
+ [591] 130847 128894 133759 133527 125695 131211 123084 114717 125640 124274
+ [601] 145758 129372 141506 123301 134174 128532 126474 130938 132796 131155
+ [611] 129773 123500 129835 128921 121260 133874 146314 138813 121846 123415
+ [621] 121656 125311 132396 138155 129726 119195 118741 134937 156179 131894
+ [631] 127999 121065 118278 137173 129736 129403 138689 134342 139106 115945
+ [641] 119217 116713 149693 127313 132180 133426 128668 130771 122348 121243
+ [651] 123981 110851 128811 118344 123791 134654 138392 121807 111516 142077
+ [661] 145837 115132 148582 126178 129945 138313 121145 129205 123228 138493
+ [671] 129977 118987 126969 140341 134708 135497 129124 127725 127249 134107
+ [681] 125764 133415 118403 112109 130727 139759 134752 128976 132769 126319
+ [691] 105906 113983 147202 133948 152455 113701 128567 111387 129127 133938
+ [701] 138348 127193 150858 139415 115872 131537 142328 126367 119947 139581
+ [711] 141363 124947 124636 116348 120860 131626 128781 138487 133054 122216
+ [721] 126508 119793 143966 128849 123029 127318 113936 138486 121126 137901
+ [731] 109834 124423 132035 143578 131310 120337 123171 135828 126714 126819
+ [741] 111565 104931 128357 133838 127987 135552 119821 130167 120881 121030
+ [751] 144891 125825 139653 122418 120533 143349 124356 138972 119120 123684
+ [761] 115569 122054 134200 139830 122638 124255 136345 126445 133120 139298
+ [771] 137974 119060 119842 140127 152182 130740 143586 124771 118342 128532
+ [781] 141167 129612 118943 126305 144067 123409 129145 114522 121201 130347
+ [791] 123683 120627 113499 145168 126124 130155 127859 108681 130687 132991
+ [801] 134907 124322 127383 121234 127292 118825 130599 143680 145813 119058
+ [811] 117862 123247 139901 121615 134860 126617 137056 131793 147098 135360
+ [821] 124122 126478 110003 127253 138110 125697 140649 134236 122675 135921
+ [831] 127095 134933 120959 136843 140263 131289 137885 138737 121321 126888
+ [841] 134201 119079 138933 124591 128337 103112 116509 132526 146551 111186
+ [851] 132184 147921 118874 135428 134241 140078 135478 125286 126255 126107
+ [861] 138285 126894 138913 126615 135712 121933 131427 120110 117037 137113
+ [871] 114690 128680 127215 136194 130956 122280 125833 136050 118183 116487
+ [881] 145134 153785 125014 132462 136323 142081 147589 121866 118406 115145
+ [891] 130346 107462 128112 124803 108936 119516 112608 133099 141458 126466
+ [901] 132811 121126 116105 146841 129545 118510 119464 113071 130298 142312
+ [911] 113308 126058 135161 129049 141517 125865 129765 141977 129027 139063
+ [921] 147480 136016 122924 127497 128799 129765 134904 120213 128728 132687
+ [931] 127130 141834 122227 126503 121667 136725 149305 124889 123336 132567
+ [941] 132249 123906 125607 127353 131859 139474 129677 107459 119647 135756
+ [951] 120228 127685 133305 125385  91594 122609 117616 146442 133451 139397
+ [961] 131698 111444 113581 160252 136302 118466 137996 129101 121441 157090
+ [971] 136059 152333 130479 135664 155136 122943 110835 141727 124644 125645
+ [981] 130922 121625 112989 140149 110339 151778 130598 126326 116709 141621
+ [991] 137755 123091 103284 123005 129886 131711 131795 129179 133100 137906
+pdf("~/Perm1000SatelliteRep.pdf")
+plot(density(log(result7[[2]])), xlim=c((log(mean(result7[[2]]))-3),(log(mean(result7[[2]]))+3)), xlab="SatelliteRep")
+polygon(density(log(result7[[2]])), col="gray", border="gray")
+abline(v=log(result7[[1]]), lwd=2, col="red")
+dev.off()
+
+#SINERepeats
+SINERepeats<-subset(Repeats, Repeats[,4]=="SINE")
+result11<-bed_boot_scoot(bed1=IMR90, bed2=SINERepeats)
+> result11
+[[1]]
+[1] 3984790
+[[2]]
+   [1] 5046007 4954503 5084829 4956345 4989384 5032955 4970269 5021868 4966884
+  [10] 5032225 5003861 5011232 5063469 5026628 5000342 5032946 4986658 5083956
+  [19] 5041936 4997938 4983977 5007880 5046200 4991860 5034841 5011019 4986717
+  [28] 5077931 4993574 5062161 4998053 5012727 5049709 4921916 5000693 5067284
+  [37] 5064093 4979408 5059766 5007361 4999246 4973387 5043210 4971307 5020383
+  [46] 5007721 5006752 5047664 5021398 5008518 5029302 4970462 5071912 5071981
+  [55] 5029232 5054133 5009508 5021055 4968669 5026377 5060992 5033191 5016079
+  [64] 5001955 4937045 5033758 5000911 5029232 5025120 5031190 5002563 4951190
+  [73] 4996025 4996232 5073959 5062528 5041113 5047983 5040143 5028845 5020794
+  [82] 4998969 4985366 5008175 5040489 5019279 5082700 5064309 5039026 5044035
+  [91] 5091470 5045292 4972155 4992818 4981282 5001075 5072697 4994164 5027453
+ [100] 4981328 5003495 4991305 5017067 5016705 5008617 5030056 5036218 5026802
+ [109] 4994801 5031292 4987294 5055460 5038539 5027090 5079408 4989476 5084441
+ [118] 5008622 5021530 4979957 5056459 4980024 5026045 5091593 4983530 4992514
+ [127] 4994588 4972512 5030832 5016361 5012711 4981977 5014361 5021793 4999409
+ [136] 4954312 5059155 5088107 5018931 4995909 5034485 5034013 5067899 4978532
+ [145] 5014683 5048681 5005168 4995606 5034925 5017224 5001702 5073591 4973288
+ [154] 4999795 5023266 5054275 5053122 5016599 5050612 5053502 4982260 5040486
+ [163] 4974905 5007442 5039313 5061982 5074558 5015355 5000888 5039404 4959972
+ [172] 5015306 5053967 5022160 4980976 5062117 4976165 5109069 5025284 5067273
+ [181] 5031526 5039637 4996739 4985612 5032077 4988350 5015894 5053368 5069572
+ [190] 5040802 5098736 5019039 5056357 4997084 4989885 5048558 5003370 4934075
+ [199] 5046659 4981285 5047732 5069253 5067257 5043651 5021183 4943695 4999293
+ [208] 4983273 5026894 5050037 4989572 4993542 5009155 5044303 4956847 4948970
+ [217] 5058313 4978527 5006985 5019316 4935231 5004489 5023749 5035454 5066009
+ [226] 4980666 5039948 4996592 5062032 5007185 4977502 5074285 5033076 5044084
+ [235] 5025724 4993396 4983479 5068500 4988068 4963555 5007763 4994083 4994570
+ [244] 5034552 5075448 5015634 5031858 5029123 5037658 5103244 5000084 5059106
+ [253] 5014051 5115888 5029563 5031717 5007383 4972670 4996204 5061029 5047469
+ [262] 5034360 5027349 5028942 5035320 5026631 5046137 5009171 4990899 4980906
+ [271] 5025859 5010067 4994753 5020612 4989916 5029983 5049733 4952091 5031014
+ [280] 5050559 5002754 5034871 5022010 5030156 5045450 4963504 5024838 5051152
+ [289] 5042611 5033992 5041078 5049516 5063262 5018891 5033974 5035762 5015902
+ [298] 5020846 5079235 5040003 5073907 4994571 5023126 4999657 5034335 5000341
+ [307] 5047027 5022457 5005554 5061085 4984483 5055673 5035129 4982004 5004547
+ [316] 5032885 5002303 5027842 4984145 5008904 5028892 4994014 4991195 4964482
+ [325] 5028096 5022729 5005911 5010390 4973571 5040743 4985765 4990124 4972871
+ [334] 4993317 5037521 5056979 5020101 4965328 4962186 5022617 5012481 5048165
+ [343] 4962145 5040619 4992586 4996953 4984160 5012539 4978200 5007820 5072963
+ [352] 5048162 5052564 5046242 5080338 5061373 5050515 4961072 5067735 5055206
+ [361] 5040968 5058121 4995082 4946221 4985052 4986995 5080677 5009639 5112862
+ [370] 4994269 5007906 4969839 5035714 4952912 5021805 5029249 5046688 4997907
+ [379] 5020802 5057697 5001912 5077876 5024840 4994746 4986721 5019496 5010756
+ [388] 5003274 5044843 4970956 5020339 5127780 5039147 5017979 5026413 5063662
+ [397] 5049592 5010860 4990286 4985323 5024325 5026782 4988544 5052085 4989348
+ [406] 5118366 5024162 5010569 5044286 5010975 5072231 4972732 5026840 5079347
+ [415] 4933853 5028378 5034840 5010790 5070853 5074468 5032009 5024579 4951063
+ [424] 5020876 4974352 4977531 5010327 5035863 5058549 5010540 4980381 5028694
+ [433] 5109293 5017350 5036297 4982859 4949736 5040540 5007092 5068436 5032349
+ [442] 5010995 5045723 5009100 4976421 5040256 5020459 5015137 5060760 4992252
+ [451] 5050557 5003228 5044528 5061239 4998560 5096547 5083103 4999327 5007188
+ [460] 5034562 4963667 5063231 4941336 5026604 5028874 5036040 5020611 5039490
+ [469] 5024778 5079309 5006215 5038114 5012462 4983809 5045035 4963685 4997643
+ [478] 4971385 5072227 4969508 5014936 5081790 4968636 4998878 5055460 5037957
+ [487] 5019116 5071570 5031880 5014893 4985256 5082800 5003657 4968445 5038071
+ [496] 5110011 5073831 5027955 4994617 5006052 5007496 5043185 5092129 4948415
+ [505] 5020512 5013503 5014696 5011928 5041127 5026336 5025663 5020611 5036801
+ [514] 5027408 5036092 5040913 5083707 5065330 5030458 5012619 5030911 5056360
+ [523] 5033123 5063022 5028234 4984515 5008129 4971704 5029140 5031015 5036890
+ [532] 5023000 4996736 5022545 4976827 4976524 5083415 4988834 5042839 5017209
+ [541] 5034925 5026230 5056620 5052037 5067079 4982246 5034369 4985062 5008766
+ [550] 5015834 4990002 5035644 4982260 5046936 5019433 4982813 5053498 4983087
+ [559] 4970114 5109366 5045509 5011717 5017425 4986834 5014427 5078702 5007756
+ [568] 5052196 4973452 5080846 5004124 4990180 4916782 5024006 5045421 5011694
+ [577] 5046461 5055446 4967493 4954677 4996604 5040149 5021604 5020392 5074865
+ [586] 5016257 5072467 5001119 4994042 5038119 4982863 5015714 5022494 5028388
+ [595] 5044791 5011799 5034956 5031366 5045458 5030167 5031791 5031205 4983284
+ [604] 5058472 5066673 4965791 4999102 5053719 5102463 5018556 5039804 5046455
+ [613] 5019364 5018949 5012759 5003102 5037420 4998349 4983491 4962654 4997967
+ [622] 5060467 5045795 5032477 5076908 4978612 5038877 5045902 5039486 4977486
+ [631] 4989902 4963555 5041484 5064694 4973160 4996249 5005563 5061552 5019431
+ [640] 4960558 4988521 4986472 5035126 5029425 5005773 4943097 5092623 4998621
+ [649] 5026395 5028107 5043779 5039738 5048250 5024814 5060968 5041258 5033818
+ [658] 5001994 5074418 4996139 5059463 5039856 5011444 4978064 4984617 4975875
+ [667] 4988403 5028920 4997352 5026338 5065664 4951299 4998888 5015577 4996643
+ [676] 5012628 5026967 5086624 4996004 4992880 5017485 5046840 4984197 5029768
+ [685] 5034751 4938710 5017906 5011262 5019019 5024848 4993847 5041410 5037554
+ [694] 5054681 4982881 4972326 5013304 5073031 5092213 4961055 5051412 4999347
+ [703] 4971836 4978068 4999557 5016397 4985496 5058098 4999752 5036635 5048933
+ [712] 5002978 5053568 4979871 5043628 4975151 4987184 5046970 4974504 5019320
+ [721] 5028184 5036653 5047972 4994570 5025036 4991069 4999256 5012424 5030642
+ [730] 5001131 4965187 4984572 5030746 5018735 5031602 4949438 5016867 5037804
+ [739] 4972556 5049966 5070648 5026741 4969000 4988757 5011195 5062992 4994058
+ [748] 4954678 4993450 5047030 5008122 5021981 4974542 4969009 5078083 4982419
+ [757] 5048232 5047504 5022284 5001983 5008394 5029763 5020254 5069960 5042792
+ [766] 5109635 5069208 5003825 5013017 5011114 5054461 5053027 5036808 4985573
+ [775] 5038250 5069096 5054289 4990434 5007872 4982503 4979994 4976679 5089780
+ [784] 5097958 5006746 5031016 5035068 5058406 5041008 5004232 5037692 4986405
+ [793] 5050492 5051035 5044377 4991893 5044280 4985191 5006006 5012464 5023364
+ [802] 5026566 4986053 5034285 5043224 4981147 5050084 4959274 5038003 5049183
+ [811] 5053840 5055016 4986529 5032675 5000022 5032319 5002796 5044654 4991722
+ [820] 4997568 5058818 4976621 4992840 4977049 5000291 5049206 5013283 4954371
+ [829] 4995362 4951661 5024559 4958716 5003752 5012233 5047352 5000954 4983081
+ [838] 4974352 5005891 4987365 5035770 4967701 5015415 5053546 5044410 5062351
+ [847] 5051567 5009895 5054614 5075125 5108107 5023907 4970805 5002271 5048971
+ [856] 5014127 4955437 4984436 5036003 5031257 4985243 5030990 5072753 5043173
+ [865] 4933398 4998972 5043283 4975899 5038482 5046480 5018238 4991691 5062809
+ [874] 5064465 5008525 4983384 5059235 5063523 5023939 5003740 5020000 5009616
+ [883] 4998732 4994992 5021629 5006324 5031043 5043884 5029393 5001036 5007372
+ [892] 5062529 5080699 4985332 5025388 5005334 5039375 4997988 5034169 5041339
+ [901] 5038089 4995429 4987100 5045017 5011652 5010536 4967074 5034369 4997266
+ [910] 4970985 5001019 5025133 5100814 5021359 4977729 5077713 5001931 5033534
+ [919] 5038076 5053525 5063167 5031294 5007488 5033615 5032020 5023014 4988024
+ [928] 5026445 5096177 5031396 5045289 4975342 5032881 4995442 5059054 5022407
+ [937] 5074884 5011419 5028695 4993994 5034958 5016116 5023611 5021076 5065834
+ [946] 4973222 5016057 5035899 4975753 4956885 4997759 5022740 5015253 5031241
+ [955] 4945110 5007765 5037766 5014825 5106345 4931142 4991394 5052378 4982929
+ [964] 4997319 5018243 5028278 4992619 5050640 5027350 5073764 5070372 4954883
+ [973] 5021362 4956322 5027812 5000516 5056652 5011731 4986262 4981418 5011922
+ [982] 5064115 5029772 5057287 5026483 5028009 4950763 5017974 5036851 5026388
+ [991] 4934127 5014003 5062627 5028855 4984667 5060760 5047001 4989228 5063539
+[1000] 4999371
+pdf("~/Perm1000SINERep.pdf")
+plot(density(log(result11[[2]])), xlim=c((log(mean(result11[[2]]))-3),(log(mean(result11[[2]]))+3)), xlab="SINERep")
+polygon(density(log(result11[[2]])), col="gray", border="gray")
+abline(v=log(result11[[1]]), lwd=2, col="red")
+dev.off()
+
+#DNARepeats
+DNARepeats<-subset(Repeats, Repeats[,4]=="DNA")
+result3<-bed_boot_scoot(bed1=IMR90, bed2=DNARepeats)
+> result3
+[[1]]
+[1] 494791
+[[2]]
+   [1] 1329732 1313301 1314635 1325056 1286461 1308910 1291588 1302781 1306488
+  [10] 1323198 1323835 1330445 1299977 1332541 1336931 1334703 1297507 1322551
+  [19] 1278061 1315705 1310358 1325102 1308096 1295043 1301722 1296569 1281821
+  [28] 1320513 1296418 1310394 1309524 1296692 1322970 1282600 1274320 1285118
+  [37] 1297341 1318455 1294457 1298892 1319567 1331240 1289203 1283856 1298368
+  [46] 1323568 1311009 1299565 1310687 1341985 1265465 1327427 1262684 1309614
+  [55] 1322185 1301600 1288556 1263597 1327175 1288076 1316163 1301480 1317754
+  [64] 1304030 1322293 1353103 1339885 1315301 1275353 1311525 1284329 1335140
+  [73] 1339699 1306665 1343847 1301013 1331784 1302223 1318740 1314637 1301466
+  [82] 1338690 1283470 1317900 1294983 1306716 1288718 1322003 1295916 1305302
+  [91] 1289159 1297046 1327029 1321350 1278094 1330332 1312195 1306107 1321847
+ [100] 1303386 1318329 1315954 1305294 1304536 1309557 1292352 1334201 1336601
+ [109] 1320021 1319838 1284939 1327759 1316689 1329257 1318516 1307707 1303028
+ [118] 1308918 1263279 1318856 1310020 1309602 1314849 1329140 1307066 1314903
+ [127] 1286658 1324606 1296077 1337677 1294679 1320385 1323083 1334114 1320804
+ [136] 1297288 1280959 1302622 1324998 1295167 1316797 1299044 1288721 1293025
+ [145] 1304923 1304947 1338399 1286267 1375944 1324044 1305009 1321099 1318100
+ [154] 1317140 1335787 1306629 1306729 1290198 1284610 1330045 1279893 1280424
+ [163] 1294093 1305769 1314141 1291489 1322430 1273849 1329496 1305592 1303694
+ [172] 1313621 1301782 1332651 1287550 1276533 1335716 1307462 1350335 1315775
+ [181] 1337103 1307812 1310212 1313957 1290103 1294554 1315969 1288035 1331303
+ [190] 1316261 1279252 1336251 1347752 1295605 1294522 1286371 1342664 1313995
+ [199] 1317215 1325428 1290188 1329813 1285337 1275298 1293045 1312774 1297775
+ [208] 1329639 1318194 1293795 1251656 1311848 1327621 1260283 1334362 1297377
+ [217] 1331005 1291722 1340727 1302465 1310237 1333443 1341622 1278565 1322348
+ [226] 1283731 1293093 1260365 1295840 1356448 1320331 1293840 1283484 1263317
+ [235] 1313110 1311469 1343312 1299137 1289306 1308036 1294558 1282879 1358462
+ [244] 1357551 1295625 1318066 1278328 1317254 1318515 1266685 1308829 1340819
+ [253] 1339028 1328287 1322048 1320289 1346068 1278813 1315032 1292700 1281689
+ [262] 1270918 1336491 1312206 1329066 1307337 1287687 1328581 1327408 1338003
+ [271] 1298158 1292215 1343348 1279169 1268179 1306812 1308829 1345306 1304614
+ [280] 1293966 1317211 1336967 1283842 1270500 1288852 1304016 1334292 1328619
+ [289] 1343886 1311977 1332307 1338726 1260376 1284010 1277843 1317339 1317733
+ [298] 1315449 1271373 1304202 1291927 1300021 1345646 1293440 1312166 1297176
+ [307] 1298060 1291566 1294269 1298644 1290346 1316922 1301448 1294113 1329141
+ [316] 1312416 1310325 1315681 1315654 1309695 1338681 1361511 1283073 1315718
+ [325] 1291196 1309955 1311718 1303431 1338056 1344892 1320749 1333417 1300456
+ [334] 1307701 1318982 1336688 1319914 1301791 1333201 1313103 1322361 1294117
+ [343] 1306430 1317224 1288980 1323381 1324278 1295947 1340161 1291064 1322101
+ [352] 1278583 1336423 1302295 1312172 1312692 1311949 1303859 1333573 1309662
+ [361] 1314993 1314398 1326944 1320766 1312080 1320803 1340419 1330042 1285998
+ [370] 1308763 1324536 1329868 1323852 1319772 1334007 1323993 1327982 1329160
+ [379] 1334598 1311634 1315925 1295004 1325204 1299085 1318073 1293978 1307106
+ [388] 1324932 1303932 1316571 1296552 1360450 1334426 1316860 1293205 1310352
+ [397] 1290534 1322128 1301141 1310826 1302947 1341125 1303852 1285462 1280946
+ [406] 1316178 1293209 1277201 1292566 1300123 1313023 1316665 1328508 1285149
+ [415] 1337251 1266679 1299324 1315897 1305963 1300802 1320851 1288820 1347362
+ [424] 1289613 1326019 1327485 1319691 1296517 1278327 1325342 1322558 1323111
+ [433] 1335971 1321748 1282570 1294948 1317060 1320129 1335935 1291776 1310833
+ [442] 1293852 1322710 1306179 1314119 1317627 1330416 1311446 1299651 1317271
+ [451] 1285993 1329182 1282188 1267643 1333169 1344091 1308213 1306583 1292037
+ [460] 1259369 1291919 1278158 1316110 1316850 1287481 1308710 1304719 1315386
+ [469] 1315178 1294836 1299855 1324663 1315932 1302975 1294006 1313198 1308765
+ [478] 1295596 1300994 1305308 1306872 1301541 1292665 1310507 1286055 1293922
+ [487] 1306717 1316844 1356341 1332638 1296784 1312922 1291599 1288436 1316581
+ [496] 1323491 1314966 1316326 1353069 1296136 1295496 1312207 1322522 1306468
+ [505] 1320929 1334464 1317657 1306361 1312804 1309458 1336817 1301840 1310787
+ [514] 1281418 1304586 1314877 1311350 1307013 1256493 1344240 1315140 1329414
+ [523] 1293918 1303687 1309654 1347562 1346064 1334051 1309997 1325490 1302196
+ [532] 1292907 1292409 1315806 1291825 1308645 1311600 1328357 1296154 1322055
+ [541] 1326402 1266322 1323064 1316622 1332658 1312665 1295845 1324808 1299594
+ [550] 1334406 1341689 1339739 1316247 1287608 1263440 1309077 1305643 1313087
+ [559] 1342461 1318654 1294524 1333327 1328432 1315587 1283557 1296350 1285923
+ [568] 1329289 1319544 1307882 1316900 1281118 1312885 1321532 1331954 1319124
+ [577] 1323219 1325915 1285916 1348316 1295195 1308995 1318980 1325756 1301339
+ [586] 1298963 1255733 1305637 1314539 1323030 1325998 1303847 1295881 1296631
+ [595] 1271014 1267832 1312904 1328031 1293837 1319483 1318017 1298349 1301917
+ [604] 1308975 1309881 1312086 1301673 1293366 1285561 1286624 1295003 1301954
+ [613] 1317675 1290893 1300735 1309082 1297687 1267243 1307990 1305498 1294451
+ [622] 1320021 1317410 1270123 1316632 1299557 1315676 1310335 1285165 1333170
+ [631] 1337692 1325300 1271126 1335015 1311399 1282998 1318388 1308663 1312696
+ [640] 1311812 1294728 1321025 1318488 1289401 1278922 1299759 1318538 1324103
+ [649] 1304519 1333642 1331455 1316877 1296361 1301614 1325100 1355047 1305354
+ [658] 1297045 1276962 1325352 1278982 1316787 1292170 1303051 1294594 1303239
+ [667] 1324172 1311934 1328190 1329658 1302747 1318260 1329586 1293614 1313155
+ [676] 1315425 1296528 1294220 1335087 1301898 1301689 1346186 1306878 1293475
+ [685] 1299131 1276642 1307259 1308716 1313678 1324626 1293267 1309395 1289160
+ [694] 1330958 1336040 1322098 1273904 1284276 1283054 1319941 1328524 1311525
+ [703] 1318652 1319063 1333284 1284645 1317203 1299320 1313478 1320654 1299441
+ [712] 1289763 1304047 1306831 1288066 1304764 1281151 1290975 1320110 1321419
+ [721] 1334319 1316382 1326141 1314258 1318714 1335606 1299976 1288107 1305373
+ [730] 1301833 1307077 1279199 1311159 1364786 1319761 1331844 1319475 1305659
+ [739] 1302645 1304016 1338710 1294628 1345706 1316205 1290894 1309576 1283665
+ [748] 1277156 1307509 1319305 1277106 1287986 1286221 1307561 1287414 1302006
+ [757] 1320865 1288722 1326901 1353634 1321476 1270047 1332548 1309545 1367414
+ [766] 1313606 1337534 1281135 1297300 1257670 1330511 1333234 1303275 1314615
+ [775] 1308774 1293340 1332533 1295146 1305678 1332350 1331819 1344761 1293460
+ [784] 1318674 1358811 1287544 1294330 1316036 1289830 1321833 1320321 1279124
+ [793] 1316457 1306840 1294496 1270587 1302422 1294325 1319357 1290734 1301937
+ [802] 1295638 1281775 1315238 1312536 1291926 1310242 1340955 1333178 1276886
+ [811] 1296684 1312746 1306952 1310776 1324611 1281861 1278298 1340455 1330601
+ [820] 1330905 1293643 1305269 1281380 1344161 1312704 1294159 1316758 1301549
+ [829] 1333670 1323835 1328627 1293034 1319615 1337527 1294117 1340044 1305310
+ [838] 1297507 1312678 1271279 1318309 1324346 1272402 1336896 1308096 1319562
+ [847] 1320824 1281821 1311675 1302944 1299871 1303957 1301930 1348965 1316348
+ [856] 1286612 1303778 1298885 1313047 1316830 1288847 1290673 1337073 1292617
+ [865] 1299791 1330321 1289263 1336054 1313317 1324918 1338226 1287797 1310478
+ [874] 1323684 1306297 1309953 1354041 1315257 1330027 1321194 1324768 1301746
+ [883] 1308281 1294503 1315955 1302661 1304778 1287461 1317072 1339386 1337895
+ [892] 1329695 1307844 1288104 1325895 1290108 1343972 1339885 1316994 1318152
+ [901] 1302595 1302896 1286542 1304527 1280388 1307207 1316967 1373523 1320618
+ [910] 1320809 1322107 1321640 1337472 1278458 1299984 1284553 1280241 1297381
+ [919] 1372562 1288718 1309417 1309195 1349859 1314582 1315237 1303488 1298012
+ [928] 1332173 1342643 1291091 1318693 1294828 1298236 1302227 1293064 1315387
+ [937] 1321831 1316865 1307975 1311487 1270107 1324648 1289146 1300097 1318692
+ [946] 1338833 1311282 1314171 1293977 1330452 1349637 1293741 1337191 1314163
+ [955] 1337371 1302819 1315829 1295388 1312039 1288974 1310688 1328810 1313194
+ [964] 1338278 1334855 1321341 1309391 1306489 1301634 1307011 1289305 1330900
+ [973] 1319669 1292197 1303586 1305985 1322441 1295415 1294942 1291253 1318947
+ [982] 1310381 1314094 1343638 1304220 1342053 1302477 1308184 1333259 1329776
+ [991] 1304643 1317223 1306114 1308933 1297155 1332202 1302821 1318590 1330336
+[1000] 1299696
+pdf("~/Perm1000DNARep.pdf")
+plot(density(log(result3[[2]])), xlim=c((log(mean(result3[[2]]))-3),(log(mean(result3[[2]]))+3)), xlab="DNARep")
+polygon(density(log(result3[[2]])), col="gray", border="gray")
+abline(v=log(result3[[1]]), lwd=2, col="red")
+dev.off()
+
+
+#Promoters
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeq.bed", stringsAsFactors=F)
+Prom4kb<-cbind(RefSeq[,1], RefSeq[,2]-2000, RefSeq[,2]+2000, RefSeq[,4:6])
+result12<-bed_boot_scoot(bed1=IMR90, bed2=Prom4kb)
+> result12
+[[1]]
+[1] 2868500
+[[2]]
+   [1] 1965147 1988306 1889602 1963495 1939025 1883383 2004373 1963119 1973721
+  [10] 1899658 1981964 1912027 1972100 1951062 1945465 2058851 1942605 1946582
+  [19] 1954819 1995068 1975177 1892902 1935018 1976026 1915036 1917400 1974055
+  [28] 1897606 1847321 1951537 1888796 1936209 1933703 1910714 1866249 1942387
+  [37] 1889485 1900188 1838420 1913814 1906091 1879592 1987313 1994351 2029601
+  [46] 1930432 1951945 2156725 1927534 1941963 1975378 2009929 2012878 2005157
+  [55] 2172103 2016995 1871746 1962678 1921667 1869556 1967046 1897261 1937419
+  [64] 2077002 1964704 2005048 1943395 1885189 1848854 2028439 2069399 1953590
+  [73] 1977313 1924469 1905775 1886694 1941201 1977922 1863551 1993981 1885705
+  [82] 1965337 1980975 1901633 1882392 1962035 1913322 1829289 1985689 1872300
+  [91] 1948803 1973479 1979900 1900161 2137469 1913348 1950810 1922981 2091089
+ [100] 1929010 1921575 1986459 2036253 2063810 2000407 2054049 1979823 1902872
+ [109] 2059761 1871427 1967273 1940424 1928108 1914394 1926224 1892406 1961457
+ [118] 1979251 1919771 1936962 1977078 2010389 1913745 1983452 1913812 2075195
+ [127] 1983229 1933778 1860679 2017359 2060552 1950744 1907862 2161893 1929390
+ [136] 1956191 1855726 2073585 1948901 1999808 1913287 1876273 1929101 1893399
+ [145] 1851546 1956766 1926535 1898965 1897300 1961732 1920952 1867422 2007836
+ [154] 1931887 1951353 1864883 1892223 2028347 1959108 1985643 2069386 1894263
+ [163] 2039483 1965482 1982926 1890741 2108968 1982953 2035922 1961543 1985185
+ [172] 1921071 1987027 1982194 1936812 1975842 1961214 2045645 1928931 1921428
+ [181] 1956498 2156243 1890912 1949978 1853350 1910511 1959499 1990651 1952950
+ [190] 1917908 1861363 1902576 1888749 1922599 1985298 1971703 1931285 2040248
+ [199] 1919793 1910909 1929562 1892290 1960560 1935813 1937650 2037625 1837876
+ [208] 2041739 1918609 2082645 1886822 2013657 2043897 1950555 2009778 1917849
+ [217] 1976614 1977124 1889544 2106958 1945502 1882291 1966036 2021602 2029205
+ [226] 1897850 1937949 1998389 1867351 1877964 1916371 2001642 2020360 1977468
+ [235] 2012473 2016484 1955327 1925664 1876020 2016441 1993034 1941458 1960069
+ [244] 1911622 2073496 2053251 1850447 1974563 1895433 1817124 1817312 1880813
+ [253] 1941831 2008172 2109463 2061793 1927731 2005917 1909352 1968068 1995674
+ [262] 1918453 1939944 1944147 2012959 1915483 1973911 1918441 1984197 1926880
+ [271] 2050796 1878660 1984578 2061547 1972453 1985957 2010866 2076353 1944583
+ [280] 1959857 2037539 1970576 1972534 1982494 1884763 1904379 2016726 2042859
+ [289] 2000218 2052359 1862592 1987689 2084459 1962469 2099964 2029350 1979765
+ [298] 1967211 2030492 1925909 1911566 2004544 1974212 1979335 1861260 1924836
+ [307] 1896362 1972207 1916236 2073983 2029549 1955865 1883812 2054469 2047163
+ [316] 2040378 1935921 1951495 1829326 1917419 1936979 1896169 1990592 1977537
+ [325] 2010623 2067153 1936209 1845817 1973798 1920196 2043330 2014971 1916178
+ [334] 2085194 1997476 2017395 1894775 2027724 1958769 2011480 2004351 2020640
+ [343] 2025579 1973675 1909175 1910213 1832209 2064859 1971803 2043258 1982167
+ [352] 1970684 1873974 2026411 1892098 1910811 1878999 2007294 1968713 1971372
+ [361] 1873775 1875274 1929343 1938085 1968249 1880396 1932399 1924172 2060631
+ [370] 2086992 1888306 1928403 1936004 1910921 1966941 1925664 2058102 2155271
+ [379] 2000489 1930448 1968516 2029471 2025487 1839996 1903888 1949554 1884297
+ [388] 1941043 1955217 1943694 1959888 2017692 1971965 1993503 1916487 1974660
+ [397] 1988293 2019667 2001427 2016612 2050719 1953906 1890079 1928169 1952713
+ [406] 2029241 1943809 1970217 1842662 2036234 2049420 2049933 1858438 2034995
+ [415] 2029112 1987136 1935090 1893653 1986553 1973551 1988815 1969849 1931543
+ [424] 2064608 1961126 1972470 1986687 1909055 2019525 2032694 1886582 2032293
+ [433] 1890675 1920413 1891611 1959690 2083392 2036421 1950645 2095397 1891668
+ [442] 1837109 1982198 1927229 1932845 1979875 1985124 2072080 1987616 1977151
+ [451] 1946306 1954997 2075832 1998905 1975123 2019792 1997530 1901130 2039287
+ [460] 1941052 1900513 1983473 1955239 2028007 1920353 2054163 1929687 2007533
+ [469] 1895017 1867733 1902053 1896993 2001105 1944348 1986345 1953472 2092823
+ [478] 1903122 1909748 1969196 1889860 1871212 2034855 1948271 2020885 1955357
+ [487] 1984617 1861601 1970605 2031568 1949191 1939327 1871045 1908270 1882297
+ [496] 1980641 1938307 2019855 1929634 1979869 2079076 1883515 2097608 1890891
+ [505] 1853721 2068176 1836711 1945274 1961892 2074239 1986168 1903038 2112304
+ [514] 2021906 1929295 1934302 1894073 1956922 2084615 1888718 1960887 2002249
+ [523] 1980275 1984064 2060352 1991615 2024124 1982851 2037000 1974368 2039551
+ [532] 2028807 1850126 2037523 1982746 1888163 1930714 1976141 1898916 2025190
+ [541] 1938820 1870413 1987235 1983020 2006634 1994674 1913319 2097429 1922812
+ [550] 1911692 2073113 1877346 1987509 1907822 1986854 1885775 1999556 1930248
+ [559] 1888354 1985956 2034648 2029084 2062268 1884210 1932246 1969227 1993277
+ [568] 1928964 1888111 1956330 2004071 1948962 1907765 1913642 1833991 2010458
+ [577] 1975584 2014587 1959043 1975220 1913664 2123144 1957017 1827243 1988362
+ [586] 1883195 1931424 1918540 1931359 1985717 1869380 1965066 2048033 1969307
+ [595] 2043371 1937192 2019730 1932369 2048029 2057190 2024563 2013230 1921850
+ [604] 2036072 2066881 2082659 1925257 1967248 1859997 2036719 1927157 1979992
+ [613] 2079140 1918706 1939468 1964929 1893973 1933928 1971285 1923775 1995142
+ [622] 1950224 1871581 2020811 1990329 2001872 1959724 1950236 1971495 1951393
+ [631] 1932843 1910780 1858258 1887219 1982151 1881668 1978944 2026106 1908184
+ [640] 1900409 2044516 1980422 1905049 1837968 2002807 1987090 2000172 1896077
+ [649] 1948908 2067927 1976783 1936114 1837361 1894712 1951182 2017692 2082236
+ [658] 2051124 1914697 1861880 1884534 2097987 1903287 1906433 1962383 1927592
+ [667] 2124620 1980587 1966958 1899149 2003200 1988732 1914974 1939067 1940941
+ [676] 1987319 1989546 1931617 1831535 1987253 2054893 1922281 1997632 2080679
+ [685] 2016375 1962345 1856241 1895875 1927929 1951730 2009706 2033263 1994880
+ [694] 1903884 1994476 1991360 1947944 1884252 1907674 1976517 1977571 2020817
+ [703] 2025118 2006005 1861110 1882409 1996643 1990378 1991641 1996722 1869297
+ [712] 2002833 1947089 2080755 1949088 1924736 2005066 1961860 1949445 2011921
+ [721] 1936221 1910745 1955157 1858421 2076993 1984761 2071546 2014127 1905204
+ [730] 1964366 1940105 2021575 1945044 1863222 1897300 2008693 1877670 1934481
+ [739] 2028957 2026157 1922651 1968515 1925161 1912674 1975043 1910092 1843940
+ [748] 1979241 1997945 1991058 2010061 1965746 1815356 2031266 2087021 1875469
+ [757] 1954290 1972671 2055347 1893714 1915666 1958160 2002311 1911500 2027465
+ [766] 1977050 1867769 2046206 1985675 1967338 2024761 1985526 1880272 1854360
+ [775] 2135582 1939762 1922980 1895171 2021220 1857670 1891526 1860836 1937651
+ [784] 1869853 1934861 1959061 1987928 1964680 1937546 1976050 1962397 1940575
+ [793] 1871021 1847441 1864969 1977671 1928818 1983264 1929737 1911845 1894196
+ [802] 1956106 1841155 1994259 1959248 2040317 2059297 1936956 1951160 1828763
+ [811] 1915581 1968071 1955865 2015020 1895026 2083700 1991593 1983803 1973471
+ [820] 1899964 1915414 1928467 1956442 1976359 2004977 1910451 2077593 1959549
+ [829] 1963442 2054883 1913055 1943681 1938060 2034794 1909169 1969993 1891994
+ [838] 1842386 1986314 1918056 1916589 2020290 2006296 2034102 1881142 1964851
+ [847] 2074725 2006998 1972222 1827601 1910438 1948530 1936769 2057711 1940879
+ [856] 1956638 1990301 2057489 1969370 1979510 2008991 1987299 2032599 1909727
+ [865] 1936542 2022042 1979102 1901547 2100175 1923582 1945628 1930230 1933831
+ [874] 1975805 1936301 1932825 1966663 1930237 1852352 1906479 2035210 2000184
+ [883] 2042339 1875111 1889859 1924299 1908544 2022291 1894513 1946590 1876870
+ [892] 1915198 1948095 2018458 1989295 2104868 1943050 1975493 2000381 1875634
+ [901] 1879375 2155433 1940175 2044485 1993639 1978367 1970666 1886479 2058210
+ [910] 1854605 1930252 1992494 1954503 2012663 1933502 1949941 1827912 1832871
+ [919] 2099055 1938600 1977713 1908657 1860445 2041993 1923033 2155553 1991201
+ [928] 1970925 1925642 1949408 1889098 1878946 1975965 1916779 2006141 1839626
+ [937] 2063407 1961044 2010029 2016640 2022740 1900232 1961678 1955135 1843422
+ [946] 1959641 1889677 1976023 1988508 2019159 1947696 1803959 2109037 1894212
+ [955] 1962460 2006765 1971235 1995343 1965820 1940101 2025646 1962557 2124996
+ [964] 1909670 1879168 1835483 1911905 1968720 1904645 1933217 1946104 1995569
+ [973] 1930985 1905210 2024183 2065567 2076494 1938834 1918045 2050353 1939349
+ [982] 1903861 1889953 1942635 1851805 1955257 1959835 1957236 1954241 2103351
+ [991] 1903763 1984051 1907561 1929026 1933021 2030487 1975545 2002109 2015283
+[1000] 1897255
+pdf("~/Perm1000Promoters.pdf")
+plot(density(log(result12[[2]])), xlim=c((log(mean(result12[[2]]))-3),(log(mean(result12[[2]]))+3)), xlab="Promoters")
+polygon(density(log(result12[[2]])), col="gray", border="gray")
+abline(v=log(result12[[1]]), lwd=2, col="red")
+dev.off()
+
+#CpGIslands
+CpGIslands<-read.table("~/RDIP1/hektracks/CpGIslands.bed", stringsAsFactors=F)
+result4<-bed_boot_scoot(bed1=IMR90, bed2=CpGIslands)
+> result4
+[[1]]
+[1] 499398
+[[2]]
+   [1] 241733 263481 272429 262660 280570 275653 270731 283255 260029 250234
+  [11] 271362 273648 270940 276996 258241 267410 272336 291719 266412 274313
+  [21] 251715 269212 249501 280488 249399 261781 237258 262482 240172 270312
+  [31] 266047 251715 262887 283506 252394 250130 263168 254629 264046 257010
+  [41] 272690 257385 264498 261062 263588 280710 242650 273058 258879 249082
+  [51] 268680 275226 266358 273091 261305 267303 264077 259054 252085 255332
+  [61] 243224 261254 237467 253684 251829 258503 259283 281135 262155 267874
+  [71] 267783 261891 256195 266339 257465 270040 258665 264850 259906 286817
+  [81] 262870 270488 262522 278851 271681 295830 269652 263751 246590 280980
+  [91] 269769 283307 258413 277918 256075 259838 274125 261231 265702 244387
+ [101] 260890 259914 268166 248627 274934 269167 277462 258944 252551 249442
+ [111] 267957 243868 281950 260514 258144 275049 267944 247913 294525 259419
+ [121] 280957 265608 295686 258513 261503 254528 270755 247679 264832 262682
+ [131] 258718 262607 266989 277615 264818 276190 244743 257551 272426 257721
+ [141] 275148 263562 254327 276180 258536 278113 266644 271248 252176 260308
+ [151] 264680 264315 276949 273250 250357 265104 284346 253755 267937 262643
+ [161] 269257 259215 250418 266988 266773 239115 268340 257612 252001 268009
+ [171] 250807 255829 268926 252902 254600 274333 274721 262126 241260 272634
+ [181] 239702 283375 277891 263482 267870 278190 263629 271388 259465 259326
+ [191] 261853 267912 261764 267285 272865 235076 257372 275721 267318 269621
+ [201] 260778 254101 286907 252242 256127 276581 266402 248612 278973 277234
+ [211] 247021 248832 281780 259762 266354 267777 253832 261881 248926 274007
+ [221] 253522 273273 250773 276774 252251 281816 269998 280149 277119 252143
+ [231] 265384 271839 273264 271290 274976 263663 250614 264691 267550 266114
+ [241] 251816 248196 284360 274763 258680 263552 269305 260648 278746 252268
+ [251] 267015 251604 265271 254198 237610 232191 251390 266052 264093 244187
+ [261] 266482 258857 275677 268331 269349 264791 264938 261315 249670 258767
+ [271] 260247 265466 268602 259019 265791 284061 256751 258760 265379 264610
+ [281] 252158 274204 269027 236402 258428 259467 261337 279357 277768 263362
+ [291] 279590 264518 274906 252916 273488 264431 245990 266451 278763 263503
+ [301] 271580 272687 245947 273494 267879 262328 253414 265131 262764 266921
+ [311] 258648 292212 261505 252490 235993 270945 261026 255765 263655 262861
+ [321] 262998 253021 234240 245932 266236 257668 265672 251347 253952 280977
+ [331] 251574 236850 255896 259600 279375 256909 273739 259350 260409 254240
+ [341] 253214 251858 278212 272737 242393 288687 265791 280629 281206 274092
+ [351] 274451 259940 259898 261271 266812 268569 253275 265500 269911 256190
+ [361] 268320 281015 263833 259348 254168 278499 262352 269751 255774 254941
+ [371] 264237 246491 259233 267150 296008 263259 284370 264881 263139 255231
+ [381] 260088 281193 289346 285202 287335 271726 257328 271222 278142 262367
+ [391] 272677 262874 273451 252763 264806 283463 270778 283796 267894 271407
+ [401] 242045 267935 255010 272852 278503 265841 254329 281443 279085 256996
+ [411] 278673 247856 268104 260736 263765 268964 256494 276412 253979 253183
+ [421] 257681 236742 274880 282124 251164 265693 250268 259069 261248 246362
+ [431] 262257 257767 254356 294572 269836 275334 260922 274086 257630 274674
+ [441] 297969 247220 274168 269954 253422 259358 246414 268757 270290 246951
+ [451] 272566 264937 260477 267208 266266 237224 252428 264528 266472 267119
+ [461] 273491 259024 285335 253884 258579 255692 265437 263649 273383 243550
+ [471] 247825 267954 257217 258726 247366 259391 266785 276057 259090 260793
+ [481] 283563 268843 261108 284826 256912 263494 249573 263108 259007 257580
+ [491] 272850 256906 270271 266068 267957 262632 246340 288404 243175 268824
+ [501] 275787 251027 257071 270762 255736 262098 267048 254818 263600 243066
+ [511] 263717 248195 279563 260040 268069 248884 249159 274673 287798 269371
+ [521] 269445 268913 254631 273829 240834 278682 268055 239517 242366 266916
+ [531] 273864 269135 246439 250147 269655 244788 282549 261307 264781 259567
+ [541] 268173 250260 272471 250193 255231 266886 256006 248073 272036 238704
+ [551] 242482 263442 243297 249193 267262 289680 262972 258719 265299 247967
+ [561] 256098 260524 259285 280979 245084 280684 249286 242783 262472 292888
+ [571] 255802 249518 260691 288181 265456 272264 265240 272512 264777 251766
+ [581] 256476 261430 268777 270708 270459 252464 256071 256426 282870 259993
+ [591] 266164 282167 257208 270043 259244 272556 253099 265891 294349 270630
+ [601] 263701 256413 256763 255661 273537 265615 249028 266570 252238 261210
+ [611] 274699 252541 256143 256819 268390 274059 256993 271299 258160 257903
+ [621] 251178 256527 279865 261471 247795 281484 259694 277794 256542 272871
+ [631] 265120 267640 266387 254536 246779 277383 232358 287758 267340 257682
+ [641] 240875 262904 256786 257366 260596 263775 265750 253599 256754 265617
+ [651] 271909 258311 274011 261699 273796 282065 271642 249302 256987 264343
+ [661] 267373 241017 252689 265888 265199 255022 254810 261473 250634 263563
+ [671] 266400 273492 268843 277494 265547 243646 259936 258162 242389 267345
+ [681] 251167 273288 274633 270096 286657 268815 258369 259381 276052 269114
+ [691] 251209 255583 239915 260084 269706 274853 245070 265204 277050 265014
+ [701] 273477 283275 264059 275216 277433 254104 259387 268965 264681 256415
+ [711] 277157 263597 270596 245866 261284 281999 286861 263111 263019 276414
+ [721] 254843 287657 230386 265353 273343 252188 274440 266769 260792 282093
+ [731] 273344 253511 266729 273973 248950 260114 264046 251801 273346 248117
+ [741] 263705 268418 260422 254214 284520 266702 253724 266269 256117 274212
+ [751] 294000 277787 260067 270390 282575 256855 270636 256509 270607 239257
+ [761] 254339 257511 261629 261874 272796 275183 263375 264545 269785 274420
+ [771] 263511 267204 252838 252088 261758 277097 244472 269389 279971 251791
+ [781] 251615 251940 261016 284344 268380 279213 251382 250597 262298 228161
+ [791] 265549 272739 235799 274562 261618 250829 277181 267792 250227 269188
+ [801] 258168 274680 259915 264719 263198 264952 239510 257952 275358 256395
+ [811] 275935 258567 253012 256392 262235 249005 251436 259852 265353 251622
+ [821] 279120 260852 252393 255239 254626 260200 248143 272709 253403 278784
+ [831] 264750 257650 243622 256979 253867 277029 269037 257925 249014 264093
+ [841] 252815 276560 281366 280971 256447 252716 271797 269756 272787 258433
+ [851] 258009 249473 244200 252020 256673 264414 249465 254604 267436 266331
+ [861] 252223 264005 260308 273838 242884 269524 275948 269318 257147 266027
+ [871] 256003 267990 261773 252027 269879 276547 248935 264539 259676 235442
+ [881] 259605 272048 242181 269566 261178 265817 250345 262762 248505 273766
+ [891] 279049 255961 249799 281042 260154 255243 276486 267178 271460 251787
+ [901] 269365 251497 264826 260026 271654 251589 281042 265514 246629 246321
+ [911] 260954 241996 265836 238323 265329 270978 267713 238970 248235 259013
+ [921] 257683 260185 240453 291851 272619 259154 265051 253754 262642 257261
+ [931] 255279 247559 277244 263800 267978 245199 263193 258452 255714 252727
+ [941] 260632 263468 277544 256646 271690 271775 266207 255490 264698 261693
+ [951] 252572 239698 270317 263301 232319 262238 280800 262683 249073 274869
+ [961] 260035 270648 266947 278999 283663 277139 266884 273593 266981 290130
+ [971] 247366 263004 249868 249789 248859 259451 265249 251298 261020 244496
+ [981] 268137 258032 249631 286905 273239 276901 262203 296606 253653 270623
+ [991] 247083 267786 256030 285308 271947 252550 270912 263609 270892 252752
+pdf("~/Perm1000CpGIslands.pdf")
+plot(density(log(result4[[2]])), xlim=c((log(mean(result4[[2]]))-3),(log(mean(result4[[2]]))+3)), xlab="CpGIslands")
+polygon(density(log(result4[[2]])), col="gray", border="gray")
+abline(v=log(result4[[1]]), lwd=2, col="red")
+dev.off()
+
+#RefSeq Genes
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeq.bed", stringsAsFactors=F)
+result5<-bed_boot_scoot(bed1=IMR90, bed2=RefSeq)
+
+   Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+31050000 31880000 32070000 32060000 32240000 33000000 
+
+
+> result5
+[[1]]
+[1] 31350511
+[[2]]
+   [1] 31613246 32317892 32181390 32478429 32188820 32176928 31869907 31947043
+   [9] 32353984 31980778 32463417 31878703 32045459 32090606 32017385 32144961
+  [17] 31938474 32087532 32540228 32414463 32284340 32051824 32145215 31639568
+  [25] 31782696 31798274 31947675 32341699 31841198 31786321 31866542 32286766
+  [33] 32096616 32443544 32730901 32280145 31729676 32079018 31953307 32223510
+  [41] 31915225 32244883 32159681 31822833 32040714 31761605 31861669 32408983
+  [49] 32113403 31973936 31679412 32151629 32167287 31796901 32260309 31967326
+  [57] 31725796 32214528 31618110 32063068 32236975 32102885 32237925 32104277
+  [65] 31910587 32207358 32079298 31769857 32129590 32061177 32247065 32469009
+  [73] 32425526 32173942 32401664 31890990 31613785 31759811 31757766 31864792
+  [81] 32617768 31961185 32228605 32227597 32257503 31870819 31866854 31963576
+  [89] 31677163 31839546 32025140 31930987 32104393 32082276 32130245 32211242
+  [97] 32136479 31943932 31861764 32492797 31657403 32264009 31884986 32190565
+ [105] 31695891 32029547 32453597 31814081 32131866 32185295 32215654 32427313
+ [113] 32448162 32025851 32031219 31741877 32349465 32141704 31848522 32315884
+ [121] 31981396 32341999 31854079 32036182 31766504 32132866 31846003 32499437
+ [129] 32060129 32056763 32376681 32680317 32049360 31635544 32293470 32438691
+ [137] 32205735 32120350 32056377 32118254 31562379 32043237 32071399 31683985
+ [145] 32081510 31677005 31766376 32036247 31894978 32109532 31866269 32478076
+ [153] 32373181 32199868 32536745 31891197 32002737 31419379 31947254 32145784
+ [161] 32002393 32115639 32108800 32032138 31882144 31784228 31112403 32458920
+ [169] 31438955 32197349 32082220 32285517 32165756 31905415 32267783 31953089
+ [177] 32085684 31808804 31882661 31751840 31987464 32381494 32259368 32180350
+ [185] 32186869 31702208 32428734 32476667 32006732 32171816 31866296 31911445
+ [193] 31889368 32028191 31904496 32433350 31375178 31607770 31826819 32355430
+ [201] 32071051 32504864 31709319 32522965 32105183 31783707 32331535 32600857
+ [209] 31857997 32157951 31698212 32666965 32331905 32387579 32311967 32064426
+ [217] 32179485 32411642 31471141 32100138 32229139 32093599 32236179 32066826
+ [225] 32000205 31791689 31956798 31897481 32195296 32086375 32042396 31628243
+ [233] 32500634 31981408 32101848 32525726 31525691 31978848 32344701 31628926
+ [241] 32302628 32224280 32078914 32022895 32026906 32177579 31960599 31908793
+ [249] 32322866 31995753 31844882 31881671 31997684 32087099 31929096 32224772
+ [257] 32144033 31923483 32408468 32732648 31693464 31751366 32271137 31985612
+ [265] 32562098 32059339 31767397 32713112 32208975 32270932 31794095 32133986
+ [273] 32178620 31992206 32214007 32249884 31820492 31720409 31910422 32503482
+ [281] 32135611 32148346 32109587 32171746 31918752 32003902 31782496 31708658
+ [289] 32179627 31720405 32219506 32386091 31960987 32214644 31717791 31760585
+ [297] 32271815 31860044 31999161 32633984 31727999 31985797 32425505 31657571
+ [305] 32093929 32289684 31892564 32410489 32552254 32112967 32090774 32181835
+ [313] 32084405 32251961 31902550 32061820 32076726 32147208 32088181 31978760
+ [321] 32185988 32198291 31784465 31913243 31053288 31832822 32725490 31597624
+ [329] 32212181 32182768 32132823 32488015 31991384 32064804 32114677 31849268
+ [337] 32198862 32101580 32176366 32362046 32414021 32253636 31967203 32442567
+ [345] 32159123 31616503 32538153 32691254 32349872 32489865 32022260 32049529
+ [353] 32526906 32178409 32332430 31990563 32293258 32091749 32062699 32065390
+ [361] 32275732 31943654 32085183 31680057 31894352 31726802 31973392 32084314
+ [369] 32659621 32141978 31943421 32112349 32157369 31585604 32425888 32173558
+ [377] 32132582 32558977 32179379 32326921 32322269 31914738 31704580 32397791
+ [385] 32513657 32179441 32691556 32257768 32326824 32244599 31908456 31954634
+ [393] 31693765 32138991 31869613 31930446 32039472 32268349 32479292 31969151
+ [401] 31319519 32216410 31886424 31748258 31834889 32542876 32171071 31810653
+ [409] 32362234 31746133 32101421 31696456 32035063 32270191 32054572 32435386
+ [417] 31600971 32227308 31585954 32253004 32138078 32143731 32722974 31663404
+ [425] 32194848 32136264 32058623 32229919 31639484 31914578 31878924 32265343
+ [433] 31972635 32178327 32327727 32366689 31977284 32155485 31626473 31670693
+ [441] 32143054 31907866 31973006 32325601 32419925 32209037 32288812 32127261
+ [449] 31531258 31856050 32555420 32725018 31782138 31965139 32168388 32074119
+ [457] 31646248 32135074 32054729 31679951 31718318 31725920 32572725 31701561
+ [465] 32069053 32074443 31821320 32185209 31686674 32596242 32318397 32055324
+ [473] 32437647 32123453 31922785 32220022 31949814 32003009 32163962 31888269
+ [481] 32372776 32086588 32440182 32243472 31672095 32282162 31962277 32157116
+ [489] 31965816 32322466 31647963 31915303 32243695 31870545 32261694 31990851
+ [497] 31917144 32380250 32497351 32342289 32271062 32132255 32159972 31942110
+ [505] 32156259 32148222 32254980 31888206 32296602 32524961 32263293 31690895
+ [513] 31705239 31578378 32407656 31957336 32348908 32291046 32108559 32127619
+ [521] 31643035 31600526 32060033 32273494 32248185 32151429 32228549 31527440
+ [529] 32199074 31948758 31998342 31959980 31988441 32120320 32355076 31973675
+ [537] 31782168 32444926 32146324 32150285 32025394 31917244 32309528 32186663
+ [545] 32823268 32407862 32209399 31488576 31958135 32160679 32052745 32134413
+ [553] 32261504 31896273 32075803 31941928 31705047 31949854 31593492 32275291
+ [561] 31845238 32077807 31874123 31735853 31902908 31916009 32149771 32366831
+ [569] 31681582 31705089 32209951 31784525 31742611 31820640 31911751 31925285
+ [577] 31896662 32334797 32212152 31862715 32514499 32202360 32116963 31664781
+ [585] 32301233 32288921 31916309 31974040 32102082 31979774 32031060 32187545
+ [593] 32154658 31986450 31877706 32104570 31523317 31917366 32462405 32152166
+ [601] 32152109 32060509 31638853 32706959 32731897 31757175 32257141 31941501
+ [609] 31263220 31498184 32354036 31826499 32053145 32275798 32063238 31864370
+ [617] 31738950 32378130 32068029 31747402 31512117 31655522 32340674 32107189
+ [625] 31954950 32356998 31913678 31911178 31767528 32338792 32095502 31825612
+ [633] 32366394 32136394 31970317 32003650 31773790 31791964 32140547 31624824
+ [641] 32216662 31971966 32082266 31842898 32352928 32365725 32019939 32316753
+ [649] 31442229 32469311 32016023 31505172 32339487 32285325 32426229 32146708
+ [657] 32385051 31645197 32222698 31875567 32049698 32132587 31953522 32291538
+ [665] 31917928 31924535 31697478 32049932 32283803 32136379 32583979 31761001
+ [673] 31767083 32180672 31751245 31834951 31913441 32415652 32082489 31939335
+ [681] 32022672 31833594 32182489 31631433 32091267 32164705 32045891 32391791
+ [689] 31929069 32058625 31729905 32558447 32034996 31698540 32212344 32248196
+ [697] 31990771 32036382 31949162 31924182 32227072 32116312 32507549 32301866
+ [705] 32049676 32003119 32201092 32097473 32043379 31717396 32237399 31972612
+ [713] 31413060 32405287 31837589 32365038 31629565 31566646 31971379 31878652
+ [721] 32512412 32275765 32415545 32530212 31759400 32000290 31967264 31834192
+ [729] 32193303 31790649 32014813 31827370 31713117 32005707 32080868 31989056
+ [737] 31863076 32028124 32045057 32025895 31729487 32004901 31720028 32003718
+ [745] 32400960 31993462 31572396 32198666 31959816 31869055 32300114 31836648
+ [753] 32046069 32290249 31727150 32223720 32151193 31905617 31970904 32068334
+ [761] 32490870 32115502 32020463 32182440 32406518 31966314 32165431 32136342
+ [769] 31876458 32240402 32527505 31967877 31797434 31588723 32434412 32683995
+ [777] 31967066 32349456 31586393 31897137 32196360 32061792 32479556 32025670
+ [785] 32079469 32003750 32001439 31949790 31958993 32003815 32266547 31997808
+ [793] 32837983 32393248 31554652 32398674 32254746 32042794 31817740 31995216
+ [801] 32315112 31688193 32297640 31889881 31702156 32388729 32193449 31748094
+ [809] 32246828 32032676 32106166 31511660 31756736 31788119 31923520 32118338
+ [817] 32124329 32294165 32052045 32587379 32332977 31831526 32563583 32027491
+ [825] 31840329 32259261 32244526 32059037 31709763 32103978 32461208 31771722
+ [833] 31853843 32561358 32368906 32318227 32157509 31710784 31669434 32145626
+ [841] 32156509 32239703 31993928 32348110 31872489 31555165 32182379 32149538
+ [849] 31734372 32544842 31814447 32229088 32094168 32147910 31535919 31587296
+ [857] 32122308 32269674 31946929 32940969 32542835 32303973 32195572 32999423
+ [865] 31885168 31784659 32457654 32025983 32434420 31551652 32699746 31952643
+ [873] 31883575 32196739 32000114 32029252 32455936 32155798 32543413 32348379
+ [881] 31983920 32469296 31843612 31821482 31590573 32484085 31682578 32092422
+ [889] 31610071 32569052 32496321 32024826 32310866 31817853 31944637 31925380
+ [897] 32071251 32326859 32367326 31758208 31518148 32448626 31902791 31866940
+ [905] 32162454 31691024 31820520 32239227 32187178 32045684 31921773 32073377
+ [913] 32083921 32065347 32205169 32382619 32273547 31815543 31666414 32099949
+ [921] 32441972 31671745 31977528 32164722 32280626 31972037 31851028 32246794
+ [929] 32320825 32424101 31986862 31665416 31933987 32517599 31691276 32199254
+ [937] 31558312 32206852 31744192 31999393 31861467 31996300 31910399 32367092
+ [945] 31595843 32173752 32943117 31700445 32030610 31930234 32124030 31733927
+ [953] 32556888 31637160 32338368 32449517 31926255 32213028 31711686 31672864
+ [961] 31976167 31826312 31795734 32096312 32004316 32188699 32306704 31746384
+ [969] 32144563 31723969 32116972 32040998 31781457 32245882 32149725 31997357
+ [977] 31595761 32176289 31950903 32207503 31948623 32005692 31631305 31849564
+ [985] 31624684 31742859 31823065 32046470 32049149 32026552 31503159 32152077
+ [993] 32416387 31781462 31844907 32073764 31931788 32007018 32149128 32120086
+pdf("~/Perm1000GeneBodies.pdf")
+plot(density(log(result5[[2]])), xlim=c((log(mean(result5[[2]]))-3),(log(mean(result5[[2]]))+3)), xlab="GeneBodies")
+polygon(density(log(result5[[2]])), col="gray", border="gray")
+abline(v=log(result5[[1]]), lwd=2, col="red")
+dev.off()
+
+
+
+pdf("~/Perm1000testSet1.pdf")
+par(mfrow=c(4,1))
+plot(density(log(result2[[2]])), xlim=c((log(mean(result2[[2]]))-3),(log(mean(result2[[2]]))+3)), xlab="LowComplex")
+polygon(density(log(result2[[2]])), col="gray", border="gray")
+abline(v=log(result2[[1]]), lwd=2, col="red")
+plot(density(log(result8[[2]])), xlim=c((log(mean(result8[[2]]))-3),(log(mean(result8[[2]]))+3)), xlab="SimpleRep")
+polygon(density(log(result8[[2]])), col="gray", border="gray")
+abline(v=log(result8[[1]]), lwd=2, col="red")
+plot(density(log(result7[[2]])), xlim=c((log(mean(result7[[2]]))-3),(log(mean(result7[[2]]))+3)), xlab="SatelliteRep")
+polygon(density(log(result7[[2]])), col="gray", border="gray")
+abline(v=log(result7[[1]]), lwd=2, col="red")
+plot(density(log(result11[[2]])), xlim=c((log(mean(result11[[2]]))-3),(log(mean(result11[[2]]))+3)), xlab="SINERep")
+polygon(density(log(result11[[2]])), col="gray", border="gray")
+abline(v=log(result11[[1]]), lwd=2, col="red")
+dev.off()
+pdf("~/Perm1000testSet2.pdf")
+par(mfrow=c(4,1))
+plot(density(log(result3[[2]])), xlim=c((log(mean(result3[[2]]))-3),(log(mean(result3[[2]]))+3)), xlab="DNARep")
+polygon(density(log(result3[[2]])), col="gray", border="gray")
+abline(v=log(result3[[1]]), lwd=2, col="red")
+plot(density(log(result12[[2]])), xlim=c((log(mean(result12[[2]]))-3),(log(mean(result12[[2]]))+3)), xlab="Promoters")
+polygon(density(log(result12[[2]])), col="gray", border="gray")
+abline(v=log(result12[[1]]), lwd=2, col="red")
+plot(density(log(result4[[2]])), xlim=c((log(mean(result4[[2]]))-3),(log(mean(result4[[2]]))+3)), xlab="CpGIslands")
+polygon(density(log(result4[[2]])), col="gray", border="gray")
+abline(v=log(result4[[1]]), lwd=2, col="red")
+plot(density(log(result5[[2]])), xlim=c((log(mean(result5[[2]]))-3),(log(mean(result5[[2]]))+3)), xlab="GeneBodies")
+polygon(density(log(result5[[2]])), col="gray", border="gray")
+abline(v=log(result5[[1]]), lwd=2, col="red")
+dev.off()

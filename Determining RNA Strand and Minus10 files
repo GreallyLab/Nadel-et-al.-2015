@@ -1,0 +1,235 @@
+################Determining strand of RNA in RNA:DNA hybrid from RDIP-seq################
+
+#To determine which strand the RNA of the RNA:DNA hybrid was, we used the samtools bit flags because of our strand-specific sequencing
+#bedtools "current" refers to Bedtools v2.16.2
+#samtools "current" refers to Samtools v.0.1.18
+
+#Getting all reads that use the bit flag 147 or 163, which are both: 1) read paired, 2) proper pair, 3) second in pair 
+#with 147 also being 4) read reverse strand, and 163 being 4) mate reverse strand
+/apps1/samtools/current/samtools view HekRDIP2/orgfiles/HekRDIP.bam.sorted.bam| awk '{ if ($2==147 || $2==163) print }' > HEKreadssecondpair.sam
+/apps1/samtools/current/samtools view -Sb HEKreadssecondpair.sam > HEKreadssecondpair.bam
+/apps1/bedtools/current/bamToBed -i HEKreadssecondpair.bam > HEKreadssecondpair.bed
+
+#Intersecting called peaks with RNA strand specific reads
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a ~/HekRDIP2/HekRDIP2P_Peaks_Skewing_summary.bed -b ~/HEKreadssecondpair.bed -wao > ~/HEKreadssecondpairInRDIP.bed
+
+#Repeating for IMR90 reads and peaks
+/apps1/samtools/current/samtools view Imr90RDIP/orgfiles/Imr90RDIP.bam.sorted.bam | awk '{ if ($2==147 || $2==163) print }' > IMR90readssecondpair.sam
+/apps1/samtools/current/samtools view -Sb IMR90readssecondpair.sam > IMR90readssecondpair.bam
+/apps1/bedtools/current/bamToBed -i IMR90readssecondpair.bam > IMR90readssecondpair.bed
+/apps1/bedtools/current/intersectBed -a ~/Imr90RDIP/Imr90RDIP_Peaks_Skewing_Summary.bed -b ~/IMR90readssecondpair.bed -wao > ~/IMR90readssecondpairInRDIP.bed
+
+
+
+
+#The following analysis was performed in R v. 2.15.0
+
+HEK<-read.table("~/SecondStrandCounts/HEKreadssecondpairInRDIP.bed", stringsAsFactors=F)
+
+#A description of the columns of SecondStrandCounts/HEKreadssecondpairInRDIP.bed
+#V1 - peak chr
+#V2 - peak start
+#V3 - peak stop
+#V4 - peak name
+#V5 - peak skewing
+#V6 - 
+#V7 - 
+#V8 - read chr
+#V9 - read start
+#V10 - read stop
+#V11 - read name 
+#V12 - 
+#V13 - read strand
+#V14 - read length
+
+#Divide reads into those aligning to the positive or negative strand
+HEKPlus<-subset(HEK, HEK[,13]=="+")
+HEKMinus<-subset(HEK, HEK[,13]=="-")
+
+#Getting read counts for each strand for each peak
+HEKPlusTable<-table(HEKPlus[,4])
+HEKMinusTable<-table(HEKMinus[,4])
+
+#Turning a table into a dataframe:
+plus<-matrix(HEKPlusTable)
+names<-names(HEKPlusTable)
+HEKPlusCounts<-data.frame(names,plus)
+minus<-matrix(HEKMinusTable)
+names<-names(HEKMinusTable)
+HEKMinusCounts<-data.frame(names,minus)
+
+#Putting everything together in one table with Peak names, number of reads aligned on the positive strand (V2) and negative strand (V3)
+test1<-data.frame(names(table(HEK[,4])))
+test<-merge(test1, HEKPlusCounts, by=1, all=TRUE)
+HEKStrandCounts<-merge(test, HEKMinusCounts, by=1, all=TRUE)
+
+#To eliminate NAs when figuring out strand proportion, I assigned all 0 values a value of 0.9
+HEKStrandCounts[is.na(HEKStrandCounts)]<-0.9
+
+#Adding a final "Strandedness" value, where 1 would be all reads are aligned to the positive strand, and -1 is all reads are aligned to the negative strand
+HEKStrandCounts<-cbind(HEKStrandCounts, (HEKStrandCounts[,2]-HEKStrandCounts[,3])/(HEKStrandCounts[,2]+HEKStrandCounts[,3]))
+
+#Adding the strandedness value back into the RDIP peaks file
+HEKRDIP<-read.table("~/HekRDIP2/HekRDIP2P_Peaks_Skewing_summary.bed", stringsAsFactors=F)
+HEKRDIP<-cbind(HEKRDIP[,4:5], HEKRDIP[,1:3])
+HEKStrandCounts<-merge(HEKStrandCounts, HEKRDIP, by=1, all=TRUE)
+HEKStrandCounts<-cbind(HEKStrandCounts[,6:8], HEKStrandCounts[,1:5])
+
+#The tables were then written out of R 
+write.table(HEKStrandCounts, "~/SecondStrandCounts/HEK2ndStrandCounts", , row.names=F, col.names=F, sep="\t", quote=F)
+
+#A description of the columns of SecondStrandCounts/HEK2ndStrandCounts
+#V1 - peak chr
+#V2 - peak start
+#V3 - peak stop
+#V4 - peak name
+#V5 - number of reads aligned to the positive strand
+#V6 - number of reads aligned to the negative strand
+#V7 - strandedness value
+#V8 - skewing value
+
+
+#The following analysis was performed in R v. 2.15.0
+
+#Repeating the same process of assigning a strandedness value for IMR90
+IMR90<-read.table("~/SecondStrandCounts/IMR90readssecondpairInRDIP.bed", stringsAsFactors=F)
+IMR90Plus<-subset(IMR90, IMR90[,13]=="+")
+IMR90Minus<-subset(IMR90, IMR90[,13]=="-")
+IMR90PlusTable<-table(IMR90Plus[,4])
+IMR90MinusTable<-table(IMR90Minus[,4])
+plus<-matrix(IMR90PlusTable)
+names<-names(IMR90PlusTable)
+IMR90PlusCounts<-data.frame(names,plus)
+minus<-matrix(IMR90MinusTable)
+names<-names(IMR90MinusTable)
+IMR90MinusCounts<-data.frame(names,minus)
+test1<-data.frame(names(table(IMR90[,4])))
+test<-merge(test1, IMR90PlusCounts, by=1, all=TRUE)
+IMR90StrandCounts<-merge(test, IMR90MinusCounts, by=1, all=TRUE)
+IMR90StrandCounts[is.na(IMR90StrandCounts)]<-0.9
+IMR90StrandCounts<-cbind(IMR90StrandCounts, (IMR90StrandCounts[,2]-IMR90StrandCounts[,3])/(IMR90StrandCounts[,2]+IMR90StrandCounts[,3]))
+IMR90RDIP<-read.table("~/Imr90RDIP/Imr90RDIP_Peaks_Skewing_Summary.bed", stringsAsFactors=F)
+IMR90RDIP<-cbind(IMR90RDIP[,4:5], IMR90RDIP[,1:3])
+IMR90StrandCounts<-merge(IMR90StrandCounts, IMR90RDIP, by=1, all=TRUE)
+IMR90StrandCounts<-cbind(IMR90StrandCounts[,6:8], IMR90StrandCounts[,1:5])
+write.table(IMR90StrandCounts, "~/SecondStrandCounts/IMR902ndStrandCounts", , row.names=F, col.names=F, sep="\t", quote=F)
+#A description of the columns of SecondStrandCounts/IMR902ndStrandCounts
+#V1 - peak chr
+#V2 - peak start
+#V3 - peak stop
+#V4 - peak name
+#V5 - number of reads aligned to the positive strand
+#V6 - number of reads aligned to the negative strand
+#V7 - strandedness value
+#V8 - skewing value
+
+#Creating files for UCSC Browser Visualization (Wiggle track)
+IMR90NegBedGraph<-cbind(IMR90StrandCounts[,1:3], -IMR90StrandCounts[,6])
+IMR90PosBedGraph<-cbind(IMR90StrandCounts[,1:3], IMR90StrandCounts[,5])
+write.table(IMR90PosBedGraph, "~/IMR90PosBedGraph", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR90NegBedGraph, "~/IMR90NegBedGraph", , row.names=F, col.names=F, sep="\t", quote=F)
+HEKNegBedGraph<-cbind(HEKStrandCounts[,1:3], -HEKStrandCounts[,6])
+HEKPosBedGraph<-cbind(HEKStrandCounts[,1:3], HEKStrandCounts[,5])
+write.table(HEKNegBedGraph, "~/HEKNegBedGraph", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEKPosBedGraph, "~/HEKPosBedGraph", , row.names=F, col.names=F, sep="\t", quote=F)
+# added manually: "track type=bedGraph name=IMR90Pos description=IMR90Pos color=0,150,0 altColor=0,150,0 visibility=full" on top of file
+
+
+
+
+###########Removing the intermediate 10% of strandedness values#########################
+
+#Because there were some peaks that had intermediate values of strandedness, we wanted to be confident in assigning a strand
+#To each peak, so we eliminated the middle 10% of strandedness values for peaks (and the peak along with it) from our dataset moving forward
+
+#The following analysis was performed in R v. 2.15.0
+
+HEK<-read.table("~/SecondStrandCounts/HEK2ndStrandCounts", stringsAsFactors=F)
+IMR90<-read.table("~/SecondStrandCounts/IMR902ndStrandCounts", stringsAsFactors=F)
+
+#A description of the columns of SecondStrandCounts/IMR902ndStrandCounts and SecondStrandCounts/HEK2ndStrandCounts
+#V1 - peak chr
+#V2 - peak start
+#V3 - peak stop
+#V4 - peak name
+#V5 - number of reads aligned to the positive strand
+#V6 - number of reads aligned to the negative strand
+#V7 - strandedness value
+#V8 - skewing value
+
+#Looking at the distribution of skewing values
+quantile(IMR90[,7], probs=seq(0,1,.05))
+#        0%         5%        10%        15%        20%        25%        30% 
+#-0.9987919 -0.9277108 -0.9000000 -0.8791946 -0.8604651 -0.8348624 -0.8181818 
+#       35%        40%        45%        50%        55%        60%        65% 
+#-0.7977528 -0.7500000 -0.6363636 -0.4285714  0.4545455  0.6363636  0.7500000 
+#       70%        75%        80%        85%        90%        95%       100% 
+# 0.7977528  0.8181818  0.8461538  0.8636364  0.8867925  0.9138756  0.9916318 
+quantile(HEK[,7], probs=seq(0,1,.05))
+#        0%         5%        10%        15%        20%        25%        30% 
+#-0.9997892 -0.9580420 -0.9230769 -0.8934911 -0.8604651 -0.8348624 -0.8125000 
+#       35%        40%        45%        50%        55%        60%        65% 
+#-0.7721519 -0.7391304 -0.6666667 -0.3793103  0.5000000  0.6949153  0.7500000 
+#       70%        75%        80%        85%        90%        95%       100% 
+# 0.7894737  0.8181818  0.8487395  0.8791946  0.9095477  0.9506375  0.9991590 
+
+#Removing the middle 10% of strandedness values (and their accompanying peaks)
+IMR90minus10<-subset(IMR90, IMR90[,7]<(-0.6363636) | IMR90[,7]>0.4545455)
+HEKminus10<-subset(HEK, HEK[,7]<(-0.6666667) | HEK[,7]>0.5000000)
+IMR90deleted<-subset(IMR90, IMR90[,7]>(-0.6363636)&IMR90[,7]<0.4545455)
+HEKdeleted<-subset(HEK, HEK[,7]>(-0.6666667)&HEK[,7]<0.5000000)
+
+#Plotting Figure based on skewing and strandedness relationship (Figure #5)
+library(scales)
+pdf("~/skewingstrandednessscatterplot.pdf")
+plot(IMR90[,7], IMR90[,8], cex=.2,  col=alpha("black", 0.1))
+abline(v=-0.6363636)
+abline(v=0.4545455)
+dev.off()
+pdf("~/densityplotskewingstranded.pdf")
+par(mfrow=c(2,2))
+plot(density(IMR90minus10[,7]))
+plot(density(IMR90[,7]))
+abline(v=-0.6363636)
+abline(v=0.4545455)
+plot(density(IMR90minus10[,8]))
+plot(density(IMR90[,8]))
+dev.off()
+write.table(IMR90minus10, "~/SecondStrandCounts/IMR90minus10", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEKminus10, "~/SecondStrandCounts/HEKminus10", , row.names=F, col.names=F, sep="\t", quote=F)
+
+#A description of the columns of SecondStrandCounts/IMR90minus10 and SecondStrandCounts/HEKminus10
+#V1 - peak chr
+#V2 - peak start
+#V3 - peak stop
+#V4 - peak name
+#V5 - number of reads aligned to the positive strand
+#V6 - number of reads aligned to the negative strand
+#V7 - strandedness value
+#V8 - skewing value
+
+#For UCSC Browser Visualization (Wiggle track)
+IMR90Minus10<-read.table("~/SecondStrandCounts/IMR90minus10", stringsAsFactors=F)
+IMR90Minus10Plus<-cbind(IMR90Minus10[,1:3], IMR90Minus10[,5])
+IMR90Minus10Minus<-cbind(IMR90Minus10[,1:3], IMR90Minus10[,6])
+IMR90Minus10Minus[,4]<-(-IMR90Minus10Minus[,4])
+IMR90Minus10Skewing<-cbind(IMR90Minus10[,1:3], IMR90Minus10[,8])
+IMR90Minus10SkewingPur<-subset(IMR90Minus10Skewing, IMR90Minus10Skewing[,4]>.5)
+IMR90Minus10SkewingPyr<-subset(IMR90Minus10Skewing, IMR90Minus10Skewing[,4]<.5)
+write.table(IMR90Minus10Plus, "~/SecondStrandCounts/IMR90Minus10Plus", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR90Minus10Minus, "~/SecondStrandCounts/IMR90Minus10Minus", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR90Minus10SkewingPur, "~/SecondStrandCounts/IMR90Minus10SkewingPur", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR90Minus10SkewingPyr, "~/SecondStrandCounts/IMR90Minus10SkewingPyr", , row.names=F, col.names=F, sep="\t", quote=F)
+HEKMinus10<-read.table("~/SecondStrandCounts/HEKminus10", stringsAsFactors=F)
+HEKMinus10Plus<-cbind(HEKMinus10[,1:3], HEKMinus10[,5])
+HEKMinus10Minus<-cbind(HEKMinus10[,1:3], HEKMinus10[,6])
+HEKMinus10Minus[,4]<-(-HEKMinus10Minus[,4])
+HEKMinus10Skewing<-cbind(HEKMinus10[,1:3], HEKMinus10[,8])
+HEKMinus10SkewingPur<-subset(HEKMinus10Skewing, HEKMinus10Skewing[,4]>.5)
+HEKMinus10SkewingPyr<-subset(HEKMinus10Skewing, HEKMinus10Skewing[,4]<.5)
+write.table(HEKMinus10Plus, "~/SecondStrandCounts/HEKMinus10Plus", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEKMinus10Minus, "~/SecondStrandCounts/HEKMinus10Minus", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEKMinus10SkewingPur, "~/SecondStrandCounts/HEKMinus10SkewingPur", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEKMinus10SkewingPyr, "~/SecondStrandCounts/HEKMinus10SkewingPyr", , row.names=F, col.names=F, sep="\t", quote=F)
+

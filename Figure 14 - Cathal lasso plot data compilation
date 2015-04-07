@@ -1,0 +1,492 @@
+##To assess the genome and feature intersections with RNA:DNA hybrids on a larger scale we looked at features
+##in 500kb windows throughout the genome and intersected that with RNA:DNA hybrids
+
+##Making 500kb windows
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/windowMaker -g hg19/hg19_chrInfo.txt -w 500000 > hg19/GenomeWindows.bed
+
+#The following analysis was performed in R v. 2.15.0
+windows<-read.table("~/hg19/GenomeWindows.bed", stringsAsFactors=F)
+#To determine the length of each window
+windows<-cbind(windows, seq(1,nrow(windows)), windows[,3]-windows[,2])
+#Subtracting out any windows that arent a full 500kb in length
+windows<-windows[grep("500000", windows[,5]),]
+write.table(windows, "~/hg19/GenomeWindows.bed", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - window length
+
+
+#RDIP
+#Getting a count of RDIP peaks for each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b NewDatasetsExcludingMidStrand/IMR90minus10 -wo > 500kbwindowthings/IMR90Minus10Windows.bed
+#The following analysis was performed in R v. 2.15.0
+IMR90Windows<-read.table("~/500kbwindowthings/IMR90Minus10Windows.bed", stringsAsFactors=F)
+#Creating a dataframe with the window number and count of RDIP peaks that intersect with each window
+WindowTable<-table(IMR90Windows[,4])
+IMR90RDIP<-matrix(WindowTable)
+names<-names(WindowTable)
+IMR90WindowCounts<-data.frame(names,IMR90RDIP)
+#adding a column to the "windows" file with the count of RNA:DNA hybrid peaks per window
+windows<-read.table("~/hg19/GenomeWindows.bed", stringsAsFactors=F)
+windows<-merge(windows, IMR90WindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,6])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+
+#The following set of script will be doing the same as was done for RDIP Peaks for a number of other genomic features
+
+#Gene bodies - from UCSC
+#Getting a count of gene bodies for each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b RDIP1/hektracks/GeneBody.bed -wo > 500kbwindowthings/GeneBodyWindows.bed
+#The following analysis was performed in R v. 2.15.0
+GenebodyWindows<-read.table("~/500kbwindowthings/GeneBodyWindows.bed", stringsAsFactors=F)
+WindowTable<-table(GenebodyWindows[,4])
+GeneBody<-matrix(WindowTable)
+names<-names(WindowTable)
+GeneBodyWindowCounts<-data.frame(names,GeneBody)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, GeneBodyWindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:6])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+
+
+#DNase Hypersensitivity - From Roadmap database
+module purge python 
+module load python/intel/2.7.3
+module load macs/1.4.2
+/apps1/macs/1.4.2/bin/macs14 -t GSM468792_UW.IMR90.ChromatinAccessibility.DS11759.bed.gz -n IMR90DNase -f BED 
+#Getting a count of areas that are DNase hypersensitive within each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b Extra/IMR90DNase/IMR90DNase_peaks.bed -wo > 500kbwindowthings/DNaseWindows.bed
+#The following analysis was performed in R v. 2.15.0
+DNaseWindows<-read.table("~/500kbwindowthings/DNaseWindows.bed", stringsAsFactors=F)
+WindowTable<-table(DNaseWindows[,4])
+DNase<-matrix(WindowTable)
+names<-names(WindowTable)
+DNaseWindowCounts<-data.frame(names,DNase)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, DNaseWindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:7])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+
+
+#LINE repeats from UCSC 
+#The following analysis was performed in R v. 2.15.0
+#Getting a file that is just LINE repeats
+RepMask<-read.table("~/RDIP1/hektracks/RepeatMasker.bed", stringsAsFactors=F)
+LINE<-grep("LINE", RepMask[,4])
+LINE<-RepMask[LINE,]
+write.table(LINE, "~/RDIP1/hektracks/LINE", row.names=F, col.names=F, sep="\t", quote=F)
+#Getting a count of LINE repeats within each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b RDIP1/hektracks/LINE -wo > 500kbwindowthings/LINEWindows.bed
+#The following analysis was performed in R v. 2.15.0
+LINEWindows<-read.table("~/500kbwindowthings/LINEWindows.bed", stringsAsFactors=F)
+WindowTable<-table(LINEWindows[,4])
+LINE<-matrix(WindowTable)
+names<-names(WindowTable)
+LINEWindowCounts<-data.frame(names,LINE)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, LINEWindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:8])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+
+#H3K9me3 marks from Roadmap database
+wget ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM469nnn/GSM469974/suppl/GSM469974%5FUCSD%2EIMR90%2EH3K9me3%2ELL224%2Ebed%2Egz
+gunzip GSM469974_UCSD.IMR90.H3K9me3.LL224.bed.gz
+cp GSM469974_UCSD.IMR90.H3K9me3.LL224.bed IMR90tracks/H3K9me3
+#Getting a count of H3K9me3 ChIP reads within each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b IMR90tracks/H3K9me3 -wo > 500kbwindowthings/H3K9me3Windows.bed
+#The following analysis was performed in R v. 2.15.0
+H3K9me3Windows<-read.table("~/500kbwindowthings/H3K9me3Windows.bed", stringsAsFactors=F)
+WindowTable<-table(H3K9me3Windows[,4])
+H3K9me3<-matrix(WindowTable)
+names<-names(WindowTable)
+H3K9me3WindowCounts<-data.frame(names,H3K9me3)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:9])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+
+#H3K27me3 marks from Roadmap database
+wget ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM469nnn/GSM469968/suppl/GSM469968%5FUCSD%2EIMR90%2EH3K27me3%2ELL223%2Ebed%2Egz
+gunzip GSM469968_UCSD.IMR90.H3K27me3.LL223.bed.gz
+cp GSM469968_UCSD.IMR90.H3K27me3.LL223.bed IMR90tracks/H3K27me3
+#Getting a count of H3K27me3 ChIP reads within each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b IMR90tracks/H3K27me3 -wo > 500kbwindowthings/H3K27me3Windows.bed
+#The following analysis was performed in R v. 2.15.0
+H3K27me3Windows<-read.table("~/500kbwindowthings/H3K27me3Windows.bed", stringsAsFactors=F)
+WindowTable<-table(H3K27me3Windows[,4])
+H3K27me3<-matrix(WindowTable)
+names<-names(WindowTable)
+H3K27me3WindowCounts<-data.frame(names,H3K27me3)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, H3K27me3WindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:10])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+
+#H3K4me3 marks from Roadmap database
+wget ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM469nnn/GSM469970/suppl/GSM469970%5FUCSD%2EIMR90%2EH3K4me3%2ELL221%2Ebed%2Egz
+gunzip GSM469970_UCSD.IMR90.H3K4me3.LL221.bed.gz
+cp GSM469970_UCSD.IMR90.H3K4me3.LL221.bed IMR90tracks/H3K4me3
+#Getting a count of H3K4me3 ChIP reads within each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b IMR90tracks/H3K4me3 -wo > 500kbwindowthings/H3K4me3Windows.bed
+#The following analysis was performed in R v. 2.15.0
+H3K4me3Windows<-read.table("~/500kbwindowthings/H3K4me3Windows.bed", stringsAsFactors=F)
+WindowTable<-table(H3K4me3Windows[,4])
+H3K4me3<-matrix(WindowTable)
+names<-names(WindowTable)
+H3K4me3WindowCounts<-data.frame(names,H3K4me3)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, H3K4me3WindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:11])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+#V11 - H3K4me3 ChIP reads
+
+#H3K4me1 marks from Roadmap database
+wget ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM521nnn/GSM521895/suppl/GSM521895%5FUCSD%2EIMR90%2EH3K4me1%2ELL222%2Ebed%2Egz
+gunzip GSM521895_UCSD.IMR90.H3K4me1.LL222.bed.gz   
+cp GSM521895_UCSD.IMR90.H3K4me1.LL222.bed IMR90tracks/H3K4me1
+#Getting a count of H3K4me1 ChIP reads within each window
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b IMR90tracks/H3K4me1 -wo > 500kbwindowthings/H3K4me1Windows.bed
+#The following analysis was performed in R v. 2.15.0
+H3K4me1Windows<-read.table("~/500kbwindowthings/H3K4me1Windows.bed", stringsAsFactors=F)
+WindowTable<-table(H3K4me1Windows[,4])
+H3K4me1<-matrix(WindowTable)
+names<-names(WindowTable)
+H3K4me1WindowCounts<-data.frame(names,H3K4me1)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, H3K4me1WindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:12])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+#V11 - H3K4me3 ChIP reads
+#V12 - H3K4me1 ChIP reads
+
+#CpG Islands from UCSC
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b RDIP1/hektracks/CpGIslands.bed -wo > 500kbwindowthings/CpGIslandWindows.bed
+#The following analysis was performed in R v. 2.15.0
+CpGIslandWindows<-read.table("~/500kbwindowthings/CpGIslandWindows.bed", stringsAsFactors=F)
+WindowTable<-table(CpGIslandWindows[,4])
+CpGIslands<-matrix(WindowTable)
+names<-names(WindowTable)
+CpGIslandsWindowCounts<-data.frame(names,CpGIslands)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, CpGIslandsWindowCounts, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:13])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+#V11 - H3K4me3 ChIP reads
+#V12 - H3K4me1 ChIP reads
+#V13 - CpG Islands
+
+#Recombination Rate from UCSC - we chose female recombination rate because IMR90 cells are female
+#The following analysis was performed in R v. 2.15.0
+RecombRate<-read.table("~/RDIP1/hektracks/RecombRate.bed", stringsAsFactors=F)
+RecombRate<-cbind(RecombRate[,1:4], RecombRate[,6])
+write.table(RecombRate, "RDIP1/hektracks/RecombRate.bed",row.names=F, col.names=F, sep="\t", quote=F)
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b RDIP1/hektracks/RecombRate.bed -wo > 500kbwindowthings/RecombRateWindows.bed
+#The following analysis was performed in R v. 2.15.0
+RecombRateWindows<-read.table("~/500kbwindowthings/RecombRateWindows.bed", stringsAsFactors=F)
+RecombRateWindows<-cbind(RecombRateWindows[,4], RecombRateWindows[,10])
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, RecombRateWindows, by.x=4, by.y=1, all=TRUE)
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+#V11 - H3K4me3 ChIP reads
+#V12 - H3K4me1 ChIP reads
+#V13 - CpG Islands
+#V14 - Recombination rate
+
+#Replication Timing - From Late-replicating heterochromatin is characterized by decreased cytosine methylation in the human genome - BdTERT (foreskin fibroblast) http://genome.cshlp.org/content/21/11/1833.short
+scp ~/Downloads/Bd_rep.wig jnadel1@c1.einstein.yu.edu:~/IMR90tracks/
+#Removed Wig header
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b IMR90tracks/Bd_rep.wig -wo > 500kbwindowthings/RepTiming.bed
+#The following analysis was performed in R v. 2.15.0
+RepTiming<-read.table("~/500kbwindowthings/RepTiming.bed", stringsAsFactors=F)
+test<-cbind(RepTiming[,4], RepTiming[,9])
+practice<-aggregate(test[,2], by=list(test[,1]), FUN=mean)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, practice, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:15])
+windows[is.na(windows)]<-0
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+#V11 - H3K4me3 ChIP reads
+#V12 - H3K4me1 ChIP reads
+#V13 - CpG Islands
+#V14 - Recombination rate
+#V15 - Replication timing
+
+#Chromosome Band - From UCSC
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b RDIP1/hektracks/ChromBand -wo > 500kbwindowthings/ChromBandWindows.bed
+#The following analysis was performed in R v. 2.15.0
+ChromBandWindows<-read.table("~/500kbwindowthings/ChromBandWindows.bed", stringsAsFactors=F)
+#Creating two groups of gneg and gpos(50/75/25/100)
+gneg<-subset(ChromBandWindows, ChromBandWindows[,10]=="gneg")
+gpos50<-subset(ChromBandWindows, ChromBandWindows[,10]=="gpos50")
+gpos25<-subset(ChromBandWindows, ChromBandWindows[,10]=="gpos25")
+gpos75<-subset(ChromBandWindows, ChromBandWindows[,10]=="gpos75")
+gpos100<-subset(ChromBandWindows, ChromBandWindows[,10]=="gpos100")
+gpos<-rbind(gpos50, gpos25, gpos75, gpos100)
+gneg<-cbind(gneg, rep(as.numeric((-1))))
+gpos<-cbind(gpos, rep(as.numeric(1)))
+colnames(gpos)<-colnames(gneg)
+ChromBandWindows<-rbind(gpos, gneg)
+test<-cbind(ChromBandWindows[,4], ChromBandWindows[,12])
+ChromBandWindows<-aggregate(test[,2], by=list(test[,1]), FUN=sum)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, ChromBandWindows, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:16])
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+#V11 - H3K4me3 ChIP reads
+#V12 - H3K4me1 ChIP reads
+#V13 - CpG Islands
+#V14 - Recombination rate
+#V15 - Replication timing
+#V16 - Chromosome banding
+
+
+#Expression Levels from our RNA-seq dataset
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a hg19/GenomeWindows.bed -b RNAseqIMR90/IMR90RNASeqRefSeqData -wo > 500kbwindowthings/IMR90RNASeqWindows.bed
+#The following analysis was performed in R v. 2.15.0
+RNASeq<-read.table("~/500kbwindowthings/IMR90RNASeqWindows.bed", stringsAsFactors=F)
+test<-cbind(RNASeq[,4], RNASeq[,9])
+#We took both a mean and a sum of RNA-seq reads for our expression level for each 500kb window
+practice<-aggregate(test[,2], by=list(test[,1]), FUN=mean)
+practice<-aggregate(test[,2], by=list(test[,1]), FUN=sum)
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+windows<-merge(windows, practice, by.x=4, by.y=1, all=TRUE)
+windows<-cbind(windows[,2:4], windows[,1], windows[,5:18])
+windows[is.na(windows)]<-0
+write.table(windows, "~/500kbwindowthings/WindowsIntersects", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - window chr
+#V2 - window start
+#V3 - window stop
+#V4 - window number
+#V5 - RDIP peak count
+#V6 - RefSeq gene bodies
+#V7 - DNase hypersensitivity 
+#V8 - LINE repeats
+#V9 - H3K9me3 ChIP reads
+#V10 - H3K27me3 ChIP reads
+#V11 - H3K4me3 ChIP reads
+#V12 - H3K4me1 ChIP reads
+#V13 - CpG Islands
+#V14 - Recombination rate
+#V15 - Replication timing
+#V16 - Chromosome banding
+#V17 - RNAseq mean
+#V18 - RNAseq sum
+
+
+#Calculating R squared values for the genomic feature occurrence in 500kb windows and the IMR90 RDIP peak occurence
+#The following analysis was performed in R v. 2.15.0
+windows<-read.table("~/500kbwindowthings/WindowsIntersects", stringsAsFactors=F)
+genebodies<-cbind(windows[,5], windows[,6])
+DNase<-cbind(windows[,5], windows[,7])
+LINE<-cbind(windows[,5], windows[,8])
+H3K9me3<-cbind(windows[,5], windows[,9])
+H3K27me3<-cbind(windows[,5], windows[,10])
+H3K4me3<-cbind(windows[,5], windows[,11])
+H3K4me1<-cbind(windows[,5], windows[,12])
+CpGIslands<-cbind(windows[,5], windows[,13])
+RecombRate<-cbind(windows[,5], windows[,14])
+ReplicationTiming<-cbind(windows[,5], windows[,15])
+Chromosome<-cbind(windows[,5], windows[,16])
+RNASeq<-cbind(windows[,5], windows[,17])
+RNASeqSum<-cbind(windows[,5], windows[,18])
+> cor(genebodies)
+          [,1]      [,2]
+[1,] 1.0000000 0.4266382
+[2,] 0.4266382 1.0000000
+> cor(DNase)
+         [,1]     [,2]
+[1,] 1.000000 0.340342
+[2,] 0.340342 1.000000
+> cor(LINE)
+          [,1]      [,2]
+[1,] 1.0000000 0.3389443
+[2,] 0.3389443 1.0000000
+> cor(H3K9me3)
+          [,1]      [,2]
+[1,] 1.0000000 0.2916875
+[2,] 0.2916875 1.0000000
+> cor(H3K27me3)
+          [,1]      [,2]
+[1,] 1.0000000 0.5228012
+[2,] 0.5228012 1.0000000
+> cor(H3K4me3)
+          [,1]      [,2]
+[1,] 1.0000000 0.4103857
+[2,] 0.4103857 1.0000000
+> cor(H3K4me1)
+          [,1]      [,2]
+[1,] 1.0000000 0.3880056
+[2,] 0.3880056 1.0000000
+> cor(CpGIslands)
+          [,1]      [,2]
+[1,] 1.0000000 0.4848326
+[2,] 0.4848326 1.0000000
+> cor(RecombRate)
+          [,1]      [,2]
+[1,] 1.0000000 0.3253641
+[2,] 0.3253641 1.0000000
+> cor(ReplicationTiming)
+          [,1]      [,2]
+[1,] 1.0000000 0.3794401
+[2,] 0.3794401 1.0000000
+> cor(Chromosome) 
+           [,1]       [,2]
+[1,]  1.0000000 -0.1765793
+[2,] -0.1765793  1.0000000
+> cor(RNASeq)
+           [,1]       [,2]
+[1,] 1.00000000 0.07356157
+[2,] 0.07356157 1.00000000
+> cor(RNASeqSum)
+          [,1]      [,2]
+[1,] 1.0000000 0.1244376
+[2,] 0.1244376 1.0000000
+
+
+#R-squared values for the genomic features with RDIP Peaks
+#1 - CHR
+#2 - START
+#3 - STOP
+#4 - WINDOW 
+#5 - IMR90RDIP 
+#6 - GENE BODIES 0.1820202
+#7 - DNAse  0.1158327
+#8 - LINE 0.1148832
+#9 - H3K9me3 0.0850816
+#10 - H3K27me3 0.2733211
+#11 - H3K4me3 0.1684164
+#12 - H3K4me1 0.1505483
+#13 - CpGIslands 0.2350627
+#14 - RecombRate 0.1058618
+#15 - ReplicationTiming 0.1439748
+#16 - Chromosome Bands 0.03118025
+#17- RNASeq Expression 0.005411305
+#18- RNASeq Expression Sum 0.01548471629
+
+#Creating a scatterplot matrix of all of the genomic feature's relationships with each other 
+#The following analysis was performed in R v. 2.15.0
+library(car)
+scatterplot.matrix(windows[,-c(1:4)], cex=.2)
+pdf("~/scatterplot.pdf")
+scatterplot.matrix(windows[,-c(1:4)], cex=.2)
+dev.off()

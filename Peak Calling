@@ -1,0 +1,127 @@
+##########Calling RDIP-Seq Peaks############
+
+#Retrieve Data Files from WASP Pipeline
+wget http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10987/raw/Imr90Input.AH7R1YADXX.lane_2_PM_I5.hg19.alignment.bam --user=JNadel1 --password=
+wget http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10987/raw/HekInput.AH7R1YADXX.lane_2_PM_I6.hg19.alignment.bam --user=JNadel1 --password=
+wget http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10987/raw/HekRDIP.AH7R1YADXX.lane_2_PM_I12.hg19.alignment.bam --user=JNadel1 --password=
+wget http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10987/raw/Imr90RDIP.AH7R1YADXX.lane_2_PM_I19.hg19.alignment.bam --user=JNadel1 --password=
+
+#Retrieve Data Files from WASP Pipeline
+#Previous version of RDIP run in HEK
+http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10733/processed/10733-1.bam
+http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10733/processed/10733-2.bam
+
+#Remove duplicates using Samtools rmdup
+#samtools "current" refers to Samtools v.0.1.18
+/apps1/samtools/current/samtools rmdup HekRDIP2/orgfiles/HekInput.AH7R1YADXX.lane_2_PM_I6.hg19.alignment.bam HekRDIP2/orgfiles/HekInput.bam
+/apps1/samtools/current/samtools rmdup HekRDIP2/orgfiles/HekRDIP.AH7R1YADXX.lane_2_PM_I12.hg19.alignment.bam HekRDIP2/orgfiles/HekRDIP.bam
+/apps1/samtools/current/samtools rmdup Imr90RDIP/orgfiles/Imr90Input.AH7R1YADXX.lane_2_PM_I5.hg19.alignment.bam Imr90RDIP/orgfiles/Imr90Input.bam
+/apps1/samtools/current/samtools rmdup Imr90RDIP/orgfiles/Imr90RDIP.AH7R1YADXX.lane_2_PM_I19.hg19.alignment.bam Imr90RDIP/orgfiles/Imr90RDIP.bam
+/apps1/samtools/current/samtools rmdup RDIPRound2/10733-1.bam RDIPRound2/Hek1Input.bam
+/apps1/samtools/current/samtools rmdup RDIPRound2/10733-2.bam RDIPRound2/Hek1RDIP.bam
+
+#Sort and index BAM files to make them into BED files:
+#samtools "current" refers to Samtools v.0.1.18
+/apps1/samtools/current/samtools sort  HekRDIP2/orgfiles/HekInput.bam HekRDIP2/orgfiles/HekInput.bam.sorted
+/apps1/samtools/current/samtools sort  HekRDIP2/orgfiles/HekRDIP.bam HekRDIP2/orgfiles/HekRDIP.bam.sorted
+/apps1/samtools/current/samtools sort  Imr90RDIP/orgfiles/Imr90Input.bam Imr90RDIP/orgfiles/Imr90Input.bam.sorted
+/apps1/samtools/current/samtools sort  Imr90RDIP/orgfiles/Imr90RDIP.bam Imr90RDIP/orgfiles/Imr90RDIP.bam.sorted
+/apps1/samtools/current/samtools sort RDIPRound2/Hek1Input.bam RDIPRound2/Hek1Input.bam.sorted
+/apps1/samtools/current/samtools sort RDIPRound2/Hek1RDIP.bam RDIPRound2/Hek1RDIP.bam.sorted
+samtools index HekRDIP2/HekInput.bam.sorted.bam
+samtools index HekRDIP2/HekRDIP.bam.sorted.bam
+samtools index Imr90RDIP/Imr90Input.bam.sorted.bam
+samtools index Imr90RDIP/Imr90RDIP.bam.sorted.bam
+samtools index RDIPRound2/Hek1Input.bam.sorted.bam
+samtools index RDIPRound2/Hek1RDIP.bam.sorted.bam
+
+#Peak Calling using MACS v. 1.4.2
+source /apps1/modules/init/bash
+module load macs/1.4.2
+#Settings:
+# -t Is treatment file
+# -c is Control file
+# -bw is band width, set to 200
+/apps1/macs/1.4.2/bin/macs14 -t Imr90RDIP/Imr90RDIP.bam.sorted.bam -c Imr90RDIP/Imr90Input.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name Imr90RDIP
+/apps1/macs/1.4.2/bin/macs14 -t HekRDIP2/HekRDIP.bam.sorted.bam -c HekRDIP2/HekInput.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name HekRDIP2P
+/apps1/macs/1.4.2/bin/macs14 -t RDIPRound2/Hek1RDIP.bam.sorted.bam -c RDIPRound2/Hek1Input.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name Hek1
+/apps1/macs/1.4.2/bin/macs14 -t RDIPRound2/10733-2.bam -c RDIPRound2/10733-1.bam --format=BAM --bw=200 --wig --space=100 --name Hek1NoPCRDel
+
+#Number of peaks called:
+#HekRDIP2 - 38994
+#Imr90RDIP - 63390
+#Hek1 - 16794
+
+#Using the Program CHANCE, we opted to exclude our HEK1 data (previous version of RDIP run in HEK)
+#Due to insufficient diversion from the input file
+#CHANCE: http://songlab.ucsf.edu/CHANCE.html
+#http://genomebiology.com/2012/13/10/r98
+
+#Measuring the number of peaks intersecting between datasets:
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b Imr90RDIP/Imr90RDIP_peaks.bed -wo > Hek2andImr90Intersect.bed
+#HekRDIP2 and Imr90RDIP  > Hek2andImr90Intersect.bed = 27294 peaks
+
+
+#The following analysis was performed in R v. 2.15.0
+#Summary of peaks:
+HEK<-read.table("~/HekRDIP2/HekRDIP2P_peaks.bed", stringsAsFactors=F)
+IMR90<-read.table("~/Imr90RDIP/Imr90RDIP_peaks.bed", stringsAsFactors=F)
+#[,2] is peak start and [,3] is peak stop - subtracting for peak length
+HEK<-cbind(HEK, HEK[,3]-HEK[,2])
+IMR90<-cbind(IMR90, IMR90[,3]-IMR90[,2])
+#Peak length summary
+> summary(HEK[,6])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  195.0   529.0   649.0   757.5   851.0 65640.0 
+> summary(IMR90[,6])
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  201.0   481.0   584.0   654.5   739.0 52470.0 
+#Nucleotides covered by peaks:
+> sum(HEK[,6])
+[1] 29539552
+> sum(IMR90[,6])
+[1] 41486683
+
+#Retreiving peaks that contained any "N" nucleotides:
+#bedtools refers to Bedtools v2.16.2
+bedtools getfasta -fi /ifs/data/bio/Genomes/H.sapiens/hg19/human_hg19.fa -bed HekRDIP2P_peaks.bed -fo HekRDIP2P_peaks.fasta –name
+bedtools getfasta -fi /ifs/data/bio/Genomes/H.sapiens/hg19/human_hg19.fa -bed Imr90RDIP_peaks.bed -fo Imr90RDIP_peaks.fasta -name
+$ less HekRDIP2P_peaks.fasta | grep -i "N" -B 1 | grep ">"
+>MACS_peak_2121
+>MACS_peak_5184
+>MACS_peak_5620
+>MACS_peak_6900
+>MACS_peak_7883
+>MACS_peak_16019
+>MACS_peak_21729
+>MACS_peak_23233
+>MACS_peak_23345
+>MACS_peak_23529
+>MACS_peak_23536
+>MACS_peak_26410
+>MACS_peak_26860
+>MACS_peak_26861
+>MACS_peak_31463                                                                                
+$ less Imr90RDIP_peaks.fasta | grep -i "N" -B 1 | grep ">"
+>MACS_peak_1
+>MACS_peak_3050
+>MACS_peak_11581
+>MACS_peak_33344
+>MACS_peak_35119
+>MACS_peak_35459
+>MACS_peak_35788
+>MACS_peak_41126
+>MACS_peak_41668
+>MACS_peak_50394
+
+#The following analysis was performed in R v. 2.15.0
+#Removing peaks that contain "N" nucleotides:
+Imr90<-read.table("~/Imr90RDIP/Imr90RDIP_peaks.bed", stringsAsFactors=F)
+Hek<-read.table("~/HekRDIP2/HekRDIP2P_peaks.bed", stringsAsFactors=F)
+HekRm<-rbind("MACS_peak_2121", "MACS_peak_5184","MACS_peak_5620", "MACS_peak_6900", "MACS_peak_7883", "MACS_peak_16019", "MACS_peak_21729", "MACS_peak_23233","MACS_peak_23345","MACS_peak_23529","MACS_peak_23536", "MACS_peak_26410", "MACS_peak_26860", "MACS_peak_26861", "MACS_peak_31463")
+Imr90Rm<-rbind("MACS_peak_1","MACS_peak_3050","MACS_peak_11581","MACS_peak_33344","MACS_peak_35119","MACS_peak_35459","MACS_peak_35788","MACS_peak_41126","MACS_peak_41668","MACS_peak_50394")
+Hek<-Hek[which(!(as.character(Hek[,4])%in%HekRm[,1])),]
+Imr90<-Imr90[which(!(as.character(Imr90[,4])%in%Imr90Rm[,1])),]
+write.table(Hek, "~/HekRDIP2/HekRDIP2P_peaks.bed", row.names=F, col.names=F, sep="\t", quote=F, append=F)
+write.table(Imr90, "~/Imr90RDIP/Imr90RDIP_peaks.bed", row.names=F, col.names=F, sep="\t", quote=F, append=F)

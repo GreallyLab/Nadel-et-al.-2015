@@ -1,0 +1,98 @@
+##Creating the RefSeq file that doesnt include TSS+1.5KB
+#The following analysis was performed in R v. 2.15.0
+RefSeqNorepeats<-read.table("~/RDIP1/hektracks/RefSeqNorepeats.bed", stringsAsFactors=F)
+RefSeqNorepeats<-cbind(RefSeqNorepeats[,1], RefSeqNorepeats[,2]+1500, RefSeqNorepeats[,3:5])
+RefSeqNorepeats<-cbind(RefSeqNorepeats, RefSeqNorepeats[,3]-RefSeqNorepeats[,2])
+RefSeqNorepeats<-subset(RefSeqNorepeats, RefSeqNorepeats[,6]>0)
+write.table(RefSeqNorepeats, "~/PieDeliciousness/Fig13/RefSeqnoTssdownstream", row.names=F, col.names=F, sep="\t", quote=F)
+#This got rid of 595 genes that were too short cause they were less than 1500bp
+
+#Creating Upstream/Downstream 1.5 kb datasets
+options(scipen=10000)
+#The following analysis was performed in R v. 2.15.0
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeqNorepeats.bed", stringsAsFactors=F)
+Minus1point5kb<-cbind(RefSeq[,1], RefSeq[,2]-1500, RefSeq[,2], RefSeq[,4:6])
+Minus1point5kb<-cbind(Minus1point5kb, Minus1point5kb[,3]-Minus1point5kb[,2])
+Plus1point5kb<-cbind(RefSeq[,1], RefSeq[,2], RefSeq[,2]+1500, RefSeq[,4:6])
+Plus1point5kb<-cbind(Plus1point5kb, Plus1point5kb[,3]-Plus1point5kb[,2])
+write.table(Minus1point5kb, "~/RDIP1/hektracks/Minus1point5kb.bed", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(Plus1point5kb, "~/RDIP1/hektracks/Plus1point5kb.bed", row.names=F, col.names=F, sep="\t", quote=F)
+
+#To make intergenic file that doesn't include TSS-1.5kb upstream, lncRNA or gene bodies
+#The following analysis was performed in R v. 2.15.0
+options(scipen=10000)
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeqNorepeats.bed", stringsAsFactors=F)
+RefSeq<-RefSeq[,2:7]
+Minus1point5kb<-cbind(RefSeq[,1], RefSeq[,2]-1500, RefSeq[,2], RefSeq[,4:6])
+Minus1point5kb<-cbind(Minus1point5kb, Minus1point5kb[,3]-Minus1point5kb[,2])
+lncRNA<-read.table("~/RDIP1/hektracks/lncRNA.bed", stringsAsFactors=F)
+RefSeq<-RefSeq[,1:5]
+lncRNA<-cbind(lncRNA[,1:3], lncRNA[,5], lncRNA[,4])
+Minus1point5kb<-Minus1point5kb[,1:5]
+colnames(lncRNA)<-colnames(RefSeq)
+colnames(Minus1point5kb)<-colnames(RefSeq)
+ToBeInterGenic<-rbind(RefSeq, Minus1point5kb, lncRNA)
+write.table(ToBeInterGenic, "~/RDIP1/hektracks/TobeInterGeniclncRNA.bed", row.names=F, col.names=F, sep="\t", quote=F)
+
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/complementBed -g ~/fakechrfile -i RDIP1/hektracks/TobeInterGeniclncRNA.bed > RDIP1/hektracks/Intergenic1500upstreamlncRNA.bed
+
+#Intersecting the following groups with IMR90 RDIP-seq peak (minus 10) datasets
+#bedtools "current" refers to Bedtools v2.16.2
+#1.5kb upstream to TSS
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Minus1point5kb.bed -wa > PieDeliciousness/Fig13/RDIPMinus1point5
+#TSS to 1.5kb into the gene
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Plus1point5kb.bed -wa > PieDeliciousness/Fig13/RDIPPlus1point5
+#RefSeq gene not including TSS+1.5kb
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Intergenic1500upstreamlncRNA.bed -wa > PieDeliciousness/Fig13/RDIPIntergenicNolncRNA
+#Intergenic space (not including 1.5kb upstream of TSS or lncRNA)
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b PieDeliciousness/Fig13/RefSeqnoTssdownstream -wa > PieDeliciousness/Fig13/RDIPRefSeq
+#lncRNA
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/lncRNA.bed -wa > PieDeliciousness/Fig13/RDIPlncRNA
+
+#Getting counts of RDIP-seq peaks that intersect with the above genomic features
+MinusTSS<-read.table("~/PieDeliciousness/Fig13/RDIPMinus1point5", stringsAsFactors=F)
+PlusTSS<-read.table("~/PieDeliciousness/Fig13/RDIPPlus1point5", stringsAsFactors=F)
+Intergenic<-read.table("~/PieDeliciousness/Fig13/RDIPIntergenicNolncRNA", stringsAsFactors=F)
+RefSeq<-read.table("~/PieDeliciousness/Fig13/RDIPRefSeq", stringsAsFactors=F)
+lncRNA<-read.table("~/PieDeliciousness/Fig13/RDIPlncRNA", stringsAsFactors=F)
+#Only accounting for each peak once per feature even though some intersect with of the same multiple features
+#1.5kb upstream to TSS
+> table(table(MinusTSS[,4]))
+   1    2    3    4    5 
+1185   82   13    1    1 
+> 1185+82+13+1+1
+[1] 1282
+#TSS to 1.5kb into the gene
+> table(table(PlusTSS[,4]))
+   1    2    3    4 
+1254   79   18    4 
+> 1254+79+18+4
+[1] 1355
+#Intergenic space (not including 1.5kb upstream of TSS or lncRNA)
+> table(table(Intergenic[,4]))
+    1     2 
+27932    18 
+> 27932+18
+[1] 27950
+#RefSeq gene not including TSS+1.5kb
+> table(table(RefSeq[,4]))
+    1     2     3     4     5     6     7     9    14    15    16    18 
+20677  3285   588   111    53     9     1     3     2     1     1     1 
+> 20677+3285+588+111+53+9+1+3+2+1+1+1 
+[1] 24732
+> 20677+3285+588+111+53+9+1+3+2+1+1+1 
+[1] 24732
+#lncRNA
+> table(table(lncRNA[,4]))
+   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
+2503  797  384  259  117   65   56   26   28   18    8   10    8    7    2    5 
+  17   18   19   20   21   22   23 
+  11    2    4    2    1    1    1 
+  > 2503+797+384+259+117+65+56+26+28+18+8+10+7+2+5+11+2+4+2+1+1+1
+[1] 4307
+Total - 59626
+#because some peaks intersect multiple features, they were counted multiple times, 
+#making the total number slightly higher than the actual number of RDIP-seq peaks
+> nrow(IMR90)
+[1] 57308

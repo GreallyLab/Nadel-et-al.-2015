@@ -1,0 +1,45 @@
+##To create a figure comparing the skewing of 100bp windows surrounding the TSS for genes containing peaks and those that dont 
+##Contain peaks
+#The following analysis was performed in R v. 2.15.0
+PosTSS15kbflank<-read.table("~/ToCheckMetaplot/PosTSS15kbflankSkew", stringsAsFactors=F)
+NegTSS15kbflank<-read.table("~/ToCheckMetaplot/NegTSS15kbflankSkew", stringsAsFactors=F)
+#V1 - Gene flank window chr
+#V2 - Window start
+#V3 - Window stop
+#V4 - Window number (0-199)
+#V5 - Gene ID
+#V6 - strand
+#V7 - window skewing value
+#Making the skewing value for those genes on the negative strand representative of their 
+#skewing value (because the skewing values are determined by the nucleotides on the positive strand reference sequence)
+NegTSS15kbflank<-cbind(NegTSS15kbflank[,1:6], 1-NegTSS15kbflank[,7])
+#combining the two TSS flanking region datasets to make one dataset
+colnames(NegTSS15kbflank)<-colnames(PosTSS15kbflank)
+TSS15kbflank<-rbind(PosTSS15kbflank, NegTSS15kbflank)
+#Determining the genes that contain peaks, and those without peaks
+IMR90TSS15kbflankRDIP<-read.table("~/RNAseqIMR90/IMR90TSS15kbflankRDIP", stringsAsFactors=F) 
+WithPeak<-which(TSS15kbflank[,5] %in% IMR90TSS15kbflankRDIP[,5])
+TSS15kbflankWithPeak<-TSS15kbflank[WithPeak,]
+TSS15kbflankWithoutPeak<-TSS15kbflank[-WithPeak,]
+> nrow(TSS15kbflankWithPeak)
+[1] 2691200
+> nrow(TSS15kbflankWithoutPeak)
+[1] 5031537
+#Making mean skewing values for each window surrounding the TSS
+TSS15kbflankWithPeakSplit<-split(TSS15kbflankWithPeak, TSS15kbflankWithPeak[,4])
+meanTSS15kbflankWithPeakSplit<-lapply(TSS15kbflankWithPeakSplit, function(eachchr){
+return(mean(eachchr[,7]))})
+meanTSS15kbflankWithPeakSplit<-do.call(rbind, meanTSS15kbflankWithPeakSplit)
+meanTSS15kbflankWithPeakSplit<-cbind(seq(0,199), meanTSS15kbflankWithPeakSplit)
+TSS15kbflankWithoutPeakSplit<-split(TSS15kbflankWithoutPeak, TSS15kbflankWithoutPeak[,4])
+meanTSS15kbflankWithoutPeakSplit<-lapply(TSS15kbflankWithoutPeakSplit, function(eachchr){
+return(mean(eachchr[,7]))})
+meanTSS15kbflankWithoutPeakSplit<-do.call(rbind, meanTSS15kbflankWithoutPeakSplit)
+meanTSS15kbflankWithoutPeakSplit<-cbind(seq(0,199), meanTSS15kbflankWithoutPeakSplit)
+#Plotting
+pdf("~/PolypurineSkewingAllGenesAndSnapbackGenes.pdf")
+plot(meanTSS15kbflankWithoutPeakSplit[,1], meanTSS15kbflankWithoutPeakSplit[,2], cex=0, ylim=c(.4,.6))
+lines(smooth.spline(meanTSS15kbflankWithoutPeakSplit[,1], meanTSS15kbflankWithoutPeakSplit[,2], spar=.5), col="red", lwd=2)
+lines(smooth.spline(meanTSS15kbflankWithPeakSplit[,1], meanTSS15kbflankWithPeakSplit[,2], spar=.5), col="blue", lwd=2)
+abline(h=0.5)
+dev.off()

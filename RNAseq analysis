@@ -1,0 +1,331 @@
+############Analysis of RNA-seq data for HEK293T and IMR90 samples##################
+
+
+#Retrieve Data Files from WASP Pipeline (and rename them for ease of use)
+
+#HEK293T sample H2B
+cp RNAseqHEK/H2B.BD1FAFACXX.lane_5_P0_I2.hg19.htseq-union.out.txt RNAseqHEK/H2B
+
+#HEK293T sample H2B-R (which has not been treated with RiboZero so still has rRNA)
+cp RNAseqHEK/H2B-R.BD1FAFACXX.lane_5_P0_I16.hg19.htseq-union.out.txt RNAseqHEK/H2B-R
+
+#HEK293T sample H2C
+cp RNAseqHEK/H2C.BD1FAFACXX.lane_5_P0_I4.hg19.htseq-union.out.txt RNAseqHEK/H2C
+
+#HEK293T sample H2D
+cp RNAseqHEK/H2D.BD1FAFACXX.lane_5_P0_I7.hg19.htseq-union.out.txt RNAseqHEK/H2D
+
+#IMR90 sample I2A
+cp RNAseqIMR90/I2A.BD1FAFACXX.lane_4_P0_I2.hg19.htseq-union.out.txt RNAseqIMR90/I2A
+
+#IMR90 sample I2B
+cp RNAseqIMR90/I2B.BD1FAFACXX.lane_4_P0_I4.hg19.htseq-union.out.txt RNAseqIMR90/I2B
+
+#IMR90 sample I3A
+cp RNAseqIMR90/I3A.BD1FAFACXX.lane_4_P0_I7.hg19.htseq-union.out.txt RNAseqIMR90/I3A
+
+#IMR90 sample I3A-R (which has not been treated with RiboZero so still has rRNA)
+cp RNAseqIMR90/I3A-R.BD1FAFACXX.lane_4_P0_I16.hg19.htseq-union.out.txt RNAseqIMR90/I3A-R
+
+wc RNAseqHEK/H2B
+#57664
+wc RNAseqHEK/H2B-R
+#57664
+wc RNAseqHEK/H2C
+#57664
+wc RNAseqHEK/H2D
+#57664
+wc RNAseqIMR90/I2A
+#57664
+wc RNAseqIMR90/I2B
+#57664
+wc RNAseqIMR90/I3A 
+#57664
+wc RNAseqIMR90/I3A-R
+#57664
+
+
+#The following analysis was performed in R v. 2.15.0
+
+#Combining the data files for each cell type for RiboZero depleted samples into one datatable
+H2B<-read.table("~/RNAseqHEK/H2B", stringsAsFactors=F)
+H2C<-read.table("~/RNAseqHEK/H2C", stringsAsFactors=F)
+H2D<-read.table("~/RNAseqHEK/H2D", stringsAsFactors=F)
+I2A<-read.table("~/RNAseqIMR90/I2A", stringsAsFactors=F)
+I2B<-read.table("~/RNAseqIMR90/I2B", stringsAsFactors=F)
+I3A<-read.table("~/RNAseqIMR90/I3A", stringsAsFactors=F)
+IMR90RNAseq<-cbind(I2A[,1:2], I2B[,2], I3A[,2])
+HEKRNAseq<-cbind(H2B[,1:2], H2C[,2], H2D[,2])
+write.table(HEKRNAseq, file="~/RNAseqHEK/HEKRNAseq", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - ensemble gene ID
+#V2 - H2B read counts
+#V3 - H2C read counts
+#V4 - H2D read counts
+write.table(IMR90RNAseq, file="~/RNAseqIMR90/IMR90RNASeq", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - ensemble gene ID
+#V2 - I2A read counts
+#V3 - I2B read counts
+#V4 - I3A read counts
+
+
+#Assess and normalize replicate variance using Bioconductor Package
+#Loading bioconductor package DESeq into R the first time
+source("http://bioconductor.org/biocLite.R")
+biocLite("DESeq")
+#To reload DESeq in R:
+library(DESeq)
+HekCountTable<-read.table("~/RNAseqHEK/HEKRNAseq", header=TRUE, row.names=1, stringsAsFactors=F)
+#Because all samples are untreated and biological replicates, this made them all part of the untreated group
+condition=factor(c("untreated", "untreated", "untreated"))
+cds<-newCountDataSet(HekCountTable, condition)
+cds<-estimateSizeFactors(cds)
+sizeFactors(cds)
+	    X2053     X2360      X320 
+	1.4908601 1.5803305 0.4367902 
+head(counts(cds, normalized=TRUE))
+	                      X2053       X2360      X320
+	ENSG00000000005    0.000000    0.000000    0.0000
+	ENSG00000000419 1348.885775 2103.357483 1179.0557
+	ENSG00000000457  335.376871  348.661243  224.3640
+	ENSG00000000460 1078.572017 1096.606052  137.3657
+	ENSG00000000938    0.000000    0.632779    0.0000
+	ENSG00000000971    4.024522    1.265558  622.7245
+normalizedHEK<-counts( cds, normalized=TRUE )  
+write.table(normalizedHEK, "~/RNAseqHEK/NormalizedHEKRNASeq", row.names=T, col.names=F, sep="\t", quote=F)
+IMR90CountTable<-read.table("~/RNAseqIMR90/IMR90RNASeq", header=TRUE, row.names=1, stringsAsFactors=F)
+condition=factor(c("untreated", "untreated", "untreated"))
+cds<-newCountDataSet(IMR90CountTable, condition)
+cds<-estimateSizeFactors(cds)
+sizeFactors(cds)
+head(counts(cds, normalized=TRUE))
+normalizedIMR90<-counts( cds, normalized=TRUE )  
+write.table(normalizedIMR90, "~/RNAseqIMR90/NormalizedIMR90RNASeq", row.names=T, col.names=F, sep="\t", quote=F)
+
+#Working with RNA-seq data with normalized counts 
+HEKRNAseq<-read.table("~/RNAseqHEK/NormalizedHEKRNASeq", stringsAsFactors=F)
+IMR90RNAseq<-read.table("~/RNAseqIMR90/NormalizedIMR90RNASeq", stringsAsFactors=F)
+#Looking at variance between RNAseq biological sample variation
+Imr90Range<-t(apply(IMR90RNAseq[,2:4], 1, range))
+HekRange<-t(apply(HEKRNAseq[,2:4], 1, range))
+Imr90Range<-cbind(Imr90Range, Imr90Range[,2]-Imr90Range[,1])
+HekRange<-cbind(HekRange, HekRange[,2]-HekRange[,1])
+#> summary(HekRange[,3])
+#    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+#       0        0        1      842       28 22040000 
+#> summary(Imr90Range[,3])
+#    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+#       0        0        1      966       28 31540000 
+#> cor(IMR90RNAseq[,2:4])
+#          V2        V3        V4
+#V2 1.0000000 0.9877804 0.9985685
+#V3 0.9877804 1.0000000 0.9934334
+#V4 0.9985685 0.9934334 1.0000000
+#> cor(HEKRNAseq[,2:4])
+#          V2        V3        V4
+#V2 1.0000000 0.9795606 0.9528847
+#V3 0.9795606 1.0000000 0.9938451
+#V4 0.9528847 0.9938451 1.0000000
+#Using row means of read counts per sample as expression value
+HEKRNAseq<-cbind(HEKRNAseq[,1], rowMeans(HEKRNAseq[,2:4]))
+IMR90RNAseq<-cbind(IMR90RNAseq[,1], rowMeans(IMR90RNAseq[,2:4]))
+write.table(HEKRNAseq, "~/RNAseqHEK/MeansHEKRNASeq", row.names=T, col.names=F, sep="\t", quote=F)
+write.table(IMR90RNAseq, "~/RNAseqIMR90/MeansIMR90RNASeq", row.names=T, col.names=F, sep="\t", quote=F)
+#V1 - ensemble ID
+#V2 - expression value
+
+#To Check Normalization:
+HEKPre<-read.table("~/RNAseqHEK/HEKRNAseq", stringsAsFactors=F)
+HEKPost<-read.table("~/RNAseqHEK/NormalizedHEKRNASeq", stringsAsFactors=F)
+boxplot(c(HEKPre[,2], HEKPre[,3], HEKPre[,4], HEKPost[,2], HEKPost[,3], HEKPost[,4]))
+
+#HEKRNAseq number of genes with 0 expression = 22455 (38.9%)
+#IMR90RNASeq number of genes with 0 expression = 21951 (38.1%)
+
+#Getting RefSeq gene IDs for Ensembl IDs:
+HEKRNAseq<-read.table("~/RNAseqHEK/MeansHEKRNASeq", stringsAsFactors=F)
+IMR90RNAseq<-read.table("~/RNAseqIMR90/MeansIMR90RNASeq", stringsAsFactors=F)
+require(xtable)
+require(biomaRt)
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL", host = "useast.ensembl.org")
+ensembl <- useDataset("hsapiens_gene_ensembl", mart = ensembl)
+HEKRNASeqGenes<-getBM(attributes = c("ensembl_gene_id", "refseq_mrna", "chromosome_name",  "start_position", "end_position", "strand"), filters = "ensembl_gene_id", values =HEKRNAseq[,2], mart = ensembl, uniqueRows = T)
+IMR90RNASeqGenes<-getBM(attributes = c("ensembl_gene_id", "refseq_mrna", "chromosome_name",  "start_position", "end_position", "strand"), filters = "ensembl_gene_id", values =IMR90RNAseq[,2], mart = ensembl, uniqueRows = T)
+
+#HEKRNASeqGenes: 50702 with no RefSeq (35561 with RefSeq ID)
+#IMR90RNASeqGenes: 50702 with no RefSeq (35561 with RefSeq ID)
+
+#Making file with RefSeq ID and normalized data means:
+HEKwithRefSeq<-grep("N", HEKRNASeqGenes[,2])
+HEKRefSeq<-HEKRNASeqGenes[HEKwithRefSeq,]
+IMR90withRefSeq<-grep("N", IMR90RNASeqGenes[,2])
+IMR90RefSeq<-IMR90RNASeqGenes[IMR90withRefSeq,]
+HEKRNASeqRefSeqData<-merge(HEKRefSeq, HEKRNAseq, by.x=1, by.y=2, all.x=TRUE)
+IMR90RNASeqRefSeqData<-merge(IMR90RefSeq, IMR90RNAseq, by.x=1, by.y=2, all.x=TRUE)
+write.table(HEKRNASeqRefSeqData, "~/RNAseqHEK/HEKRNASeqRefSeqData", row.names=T, col.names=F, sep="\t", quote=F)
+write.table(IMR90RNASeqRefSeqData, "~/RNAseqIMR90/IMR90RNASeqRefSeqData", row.names=T, col.names=F, sep="\t", quote=F)
+#Making into BED File Format:
+HEKRNASeq<-read.table("~/RNAseqHEK/HEKRNASeqRefSeqData", stringsAsFactors=F)
+IMR90RNASeq<-read.table("~/RNAseqIMR90/IMR90RNASeqRefSeqData", stringsAsFactors=F)
+HEKRNASeq<-cbind(HEKRNASeq[,4:6], HEKRNASeq[,9], HEKRNASeq[,2:3])
+IMR90RNASeq<-cbind(IMR90RNASeq[,4:6], IMR90RNASeq[,9], IMR90RNASeq[,2:3])
+a=as.vector(rep("chr",nrow(HEKRNASeq)))
+x=cbind(a,HEKRNASeq)
+d=cbind(a,IMR90RNASeq)
+HEKRNASeq=cbind(paste(x[,1],x[,2], sep=""),x[,3:7])
+IMR90RNASeq=cbind(paste(d[,1],d[,2], sep=""),d[,3:7])
+write.table(HEKRNASeq, "~/RNAseqHEK/HEKRNASeqRefSeqData", row.names=T, col.names=F, sep="\t", quote=F)
+write.table(IMR90RNASeq, "~/RNAseqIMR90/IMR90RNASeqRefSeqData", row.names=T, col.names=F, sep="\t", quote=F)
+#V1 - gene chr 
+#V2 - gene start
+#V3 - gene stop
+#V4 - gene expression value
+#V5 - gene ensemble ID
+#V6 - gene RefSeq ID
+
+#The following analysis was performed in R v. 2.15.0
+#Separating Expression Data into Quartiles
+IMR90<-read.table("~/RNAseqIMR90/IMR90RNASeqRefSeqData", stringsAsFactor=F)
+HEK<-read.table("~/RNAseqHEK/HEKRNASeqRefSeqData", stringsAsFactor=F)
+#adding strand information:
+RefSeq<-read.table("~/RDIP1/hektracks/RefSeq.bed", stringsAsFactors=F)
+IMR90<-cbind(IMR90[,2:7])
+HEK<-cbind(HEK[,2:7])
+IMR90<-merge(IMR90, RefSeq, by.x=6, by.y=4, all.x=TRUE)
+HEK<-merge(HEK, RefSeq, by.x=6, by.y=4, all.x=TRUE)
+IMR90<-cbind(IMR90[,2:4], IMR90[,1], IMR90[,6], IMR90[,5], IMR90[,10])
+HEK<-cbind(HEK[,2:4], HEK[,1], HEK[,6], HEK[,5], HEK[,10])
+#Subsetting out genes that have no expression
+IMR90Zero<-subset(IMR90, IMR90[,6]=="0")
+zero=which(IMR90[,6]==0)
+#Getting quartiles of expression for remaining genes
+IMR90<-IMR90[-zero,]
+summary(IMR90[,6])
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+     0.1     23.0    301.5   1178.0    990.2 373000.0 
+IMR9025<-subset(IMR90, IMR90[,6]<23)
+twentyfive=which(IMR90[,6]<23)
+IMR90<-IMR90[-twentyfive,]
+IMR9050<-subset(IMR90, IMR90[,6]<301.5)
+fifty=which(IMR90[,6]<301.5)
+IMR90<-IMR90[-fifty,]
+IMR9075<-subset(IMR90, IMR90[,6]<990.2)
+seventyfive=which(IMR90[,6]<990.2)
+IMR90<-IMR90[-seventyfive,]
+IMR90100<-IMR90
+> nrow(IMR90Zero)
+[1] 3443
+> nrow(IMR9025)
+[1] 8191
+> nrow(IMR9050)
+[1] 8178
+> nrow(IMR9075)
+[1] 8190
+> nrow(IMR90100)
+[1] 8187
+write.table(IMR90Zero, "~/RNAseqIMR90/IMR90Zero", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR9025, "~/RNAseqIMR90/IMR9025", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR9050, "~/RNAseqIMR90/IMR9050", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR9075, "~/RNAseqIMR90/IMR9075", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(IMR90100, "~/RNAseqIMR90/IMR90100", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - gene chr 
+#V2 - gene start
+#V3 - gene stop
+#V4 - gene expression value
+#V5 - gene ensemble ID
+#V6 - gene RefSeq ID
+#V7 - strand of gene
+#Repeating the same for HEK
+HEKzero<-subset(HEK, HEK[,6]=="0")
+zero=which(HEK[,6]==0)
+HEK<-HEK[-zero,]
+summary(HEK[,6])
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+     0.21     28.68    342.70   1112.00   1048.00 273100.00 
+HEK25<-subset(HEK, HEK[,6]<28.68)
+twentyfive=which(HEK[,6]<28.68)
+HEK<-HEK[-twentyfive,]
+HEK50<-subset(HEK, HEK[,6]<342.70)
+fifty=which(HEK[,6]<342.70)
+HEK<-HEK[-fifty,]
+HEK75<-subset(HEK, HEK[,6]<1048.00)
+seventyfive=which(HEK[,6]<1048.00)
+HEK<-HEK[-seventyfive,]
+HEK100<-HEK
+> nrow(HEKzero)
+[1] 3690
+> nrow(HEK25)
+[1] 8125
+> nrow(HEK50)
+[1] 8125
+> nrow(HEK75)
+[1] 8124
+> nrow(HEK100)
+[1] 8125
+write.table(HEKzero, "~/RNAseqHEK/HEKzero", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEK25, "~/RNAseqHEK/HEK25", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEK50, "~/RNAseqHEK/HEK50", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEK75, "~/RNAseqHEK/HEK75", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEK100, "~/RNAseqHEK/HEK100", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - gene chr 
+#V2 - gene start
+#V3 - gene stop
+#V4 - gene expression value
+#V5 - gene ensemble ID
+#V6 - gene RefSeq ID
+#V7 - strand of gene
+
+#Intersecting RDIP files with RNAseq:
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEKzero -wo > Intersects/HekRDIP2HEKzero
+/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK25 -wo > Intersects/HekRDIP2HEK25
+/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK50 -wo > Intersects/HekRDIP2HEK50
+/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK75 -wo > Intersects/HekRDIP2HEK75
+/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK100 -wo > Intersects/HekRDIP2HEK100
+/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR90Zero -wo > Intersects/Imr90RDIPIMR90Zero
+/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9025 -wo > Intersects/Imr90RDIPIMR9025
+/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9050 -wo > Intersects/Imr90RDIPIMR9050
+/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9075 -wo > Intersects/Imr90RDIPIMR9075
+/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR90100 -wo > Intersects/Imr90RDIPIMR90100
+
+#Combining files back into one file with expression levels listed:
+IMR90Zero<-read.table("~/RNAseqIMR90/IMR90Zero", stringsAsFactors=F)
+IMR9025<-read.table("~/RNAseqIMR90/IMR9025", stringsAsFactors=F)
+IMR9050<-read.table("~/RNAseqIMR90/IMR9050", stringsAsFactors=F)
+IMR9075<-read.table("~/RNAseqIMR90/IMR9075", stringsAsFactors=F)
+IMR90100<-read.table("~/RNAseqIMR90/IMR90100", stringsAsFactors=F)
+HEKZero<-read.table("~/RNAseqHEK/HEKzero", stringsAsFactors=F)
+HEK25<-read.table("~/RNAseqHEK/HEK25", stringsAsFactors=F)
+HEK50<-read.table("~/RNAseqHEK/HEK50", stringsAsFactors=F)
+HEK75<-read.table("~/RNAseqHEK/HEK75", stringsAsFactors=F)
+HEK100<-read.table("~/RNAseqHEK/HEK100", stringsAsFactors=F)
+IMR90Zero<-cbind(IMR90Zero, c(rep(0,nrow(IMR90Zero)))) 
+IMR9025<-cbind(IMR9025, c(rep(25,nrow(IMR9025)))) 
+IMR9050<-cbind(IMR9050, c(rep(50,nrow(IMR9050)))) 
+IMR9075<-cbind(IMR9075, c(rep(75,nrow(IMR9075)))) 
+IMR90100<-cbind(IMR90100, c(rep(100,nrow(IMR90100)))) 
+HEKZero<-cbind(HEKZero, c(rep(0,nrow(HEKZero)))) 
+HEK25<-cbind(HEK25, c(rep(25,nrow(HEK25)))) 
+HEK50<-cbind(HEK50, c(rep(50,nrow(HEK50)))) 
+HEK75<-cbind(HEK75, c(rep(75,nrow(HEK75)))) 
+HEK100<-cbind(HEK100, c(rep(100,nrow(HEK100)))) 
+colnames(IMR90Zero)<-colnames(IMR9025)
+colnames(IMR9050)<-colnames(IMR9025)
+colnames(IMR9075)<-colnames(IMR9025)
+colnames(IMR90100)<-colnames(IMR9025)
+colnames(HEKZero)<-colnames(HEK25)
+colnames(HEK50)<-colnames(HEK25)
+colnames(HEK75)<-colnames(HEK25)
+colnames(HEK100)<-colnames(HEK25)
+IMR90RNASeqTotal<-rbind(IMR90Zero, IMR9025, IMR9050, IMR9075, IMR90100)
+HEKRNASeqTotal<-rbind(HEKZero, HEK25, HEK50, HEK75, HEK100)
+write.table(IMR90RNASeqTotal, "~/RNAseqIMR90/IMR90RNASeqTotal", row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEKRNASeqTotal, "~/RNAseqHEK/HEKRNASeqTotal", row.names=F, col.names=F, sep="\t", quote=F)
+#V1 - gene chr 
+#V2 - gene start
+#V3 - gene stop
+#V4 - gene expression value
+#V5 - gene ensemble ID
+#V6 - gene RefSeq ID
+#V7 - strand of gene
+#V8 - quantile (or no expression) of expression of gene (0, 25, 50, 75, 100)
+

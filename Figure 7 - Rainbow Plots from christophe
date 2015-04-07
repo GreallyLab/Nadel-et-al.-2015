@@ -1,0 +1,312 @@
+#Intersecting gene bodies with RDIP-seq "Minus 10" datasets to create dataset for this figure:
+#bedtools "current" refers to Bedtools v2.16.2
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/HEKminus10 -b RDIP1/hektracks/GeneBody.bed -wo > SecondStrandCounts/HEKminus10geneBodies.bed
+/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/GeneBody.bed -wo > SecondStrandCounts/IMR90minus10GeneBodies.bed
+#The following analysis was performed in R v. 2.15.0
+IMR90<-read.table("~/SecondStrandCounts/IMR90minus10GeneBodies.bed", stringsAsFactors=F)
+HEK<-read.table("~/SecondStrandCounts/HEKminus10geneBodies.bed", stringsAsFactors=F)
+#Remove duplicates of peak names so that if one peak intersects multiple genes, it is only accounted for once
+HEK<-HEK[!duplicated(HEK[,4]),]
+IMR90<-IMR90[!duplicated(IMR90[,4]),]
+#Dividing by peaks that intersect genes on the positive strand and genes on the negative strand
+PosIMR90<-subset(IMR90, IMR90[,12]=="+")
+NegIMR90<-subset(IMR90, IMR90[,12]=="-")
+PosHEK<-subset(HEK, HEK[,12]=="+")
+NegHEK<-subset(HEK, HEK[,12]=="-")
+#With removing duplicates:
+#> nrow(PosIMR90)
+#[1] 11932
+#> nrow(NegIMR90)
+#[1] 11677
+#> nrow(IMR90)
+#[1] 23609
+#Summary of skewing of peaks that intersect with genes on the positive strand and genes on the negative strand
+#> summary(PosIMR90[,8])
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 0.0000  0.3635  0.4409  0.4855  0.6196  0.9040 
+#> summary(NegIMR90[,8])
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 0.1069  0.3799  0.5605  0.5139  0.6346  0.9716 
+#> nrow(subset(PosIMR90, PosIMR90[,8]<.5))
+#[1] 6387
+#> nrow(subset(PosIMR90, PosIMR90[,8]>.5))
+#[1] 5545
+#> 6387/11932
+#[1] 0.5352833
+#> 5545/11932
+#[1] 0.4647167
+#> nrow(subset(NegIMR90, NegIMR90[,8]<.5))
+#[1] 5375
+#> nrow(subset(NegIMR90, NegIMR90[,8]>.5))
+#[1] 6302
+#> 6302/11677
+#[1] 0.5396934
+#> 5375/11677
+#[1] 0.4603066
+#> nrow(subset(IMR90, IMR90[,8]>.5))
+#[1] 11847
+#> nrow(subset(IMR90, IMR90[,8]<.5))
+#[1] 11762
+#> 11847/23609
+#[1] 0.5018002
+#> 11762/23609
+#[1] 0.4981998
+
+
+#Using the datasets from the gene body intersection with the RDIP-seq minus 10 datasets, after subtracting duplicated peaks, 
+#The script below was used to create figure 7:
+
+#Set the working directory
+setwd("/Users/Blackbull/Documents/PostDoc_Work_Einstein/Julie's project/GA_skewing_Peaks/Excluding_Peaks_with_Ns/Filtered_chromosomes/")
+
+#Specify the file name you want to plot (it should contain "Peak_ID tabulation Values_GAskew_forEachWindow")
+fc <- file("Gene body peaks/Results_GAskew_peaks_Filtered_chromosomes_Sorted_Gene_Bodies_Negative_strand.txt")
+#Then it loads the content of the file in "mylist"
+mylist <- strsplit(readLines(fc), "\t")
+close(fc)
+
+#Treatment of "mylist" to store the peak names/IDs and then their numerical value for GAskew per window.
+names(mylist) <- sapply(mylist, function(x) x[[1]] )
+PeakNames <- names(mylist)
+mylist <- sapply(mylist, function(x) as.numeric( x[-1] ) )
+
+
+
+#################### Solution for single peak to plot (Lines + colour of window) ####################
+
+#Specify here the index of the Peak you want to plot:
+PeakID <-37
+#Then line1 gets all the values of the peak desired
+line1 <- mylist[[PeakID]]
+
+#Specify the spectrum of colours for the rainbow to be used, 1000 values of colours for smooth transitions.
+r<-rev(rainbow(1000, start=rgb2hsv(col2rgb("red")), end=rgb2hsv(col2rgb("blue"))))
+#Then associates each GAskewing value to a colour, resulting colour of the value is stored in the vector "colour".
+mult = (line1*(1000-1))+1
+colours = r[mult]
+
+#Then plot the result:
+#Start by splitting the plot area in 2 columns
+par(mfrow=c(1,2))
+#Plot the colour scale
+plot(rep(0, 1000), seq(0,1, length.out=1000), col=r, pch = 15, xlim=0:1, ylab="GA content ratio", bty="n:", xaxt="n", xlab="")
+#Now plot the line of colours for the current peak and displays its actual name/ID
+plot(1:length(line1), y=rep(1.1,length(line1)), pch =15, col=r[mult], ylim=c(0,1.4), main=PeakNames[PeakID] )
+#Finally plots the line of values in the same graph.
+lines(line1)
+
+
+#################### Plot of the stacked peak colours ####################
+
+# Calculate and store in PeakSummary the number of windows for each Peak (representative of the sequence length then) and the average GAskewing value
+PeakSummary <- data.frame()
+for(i in 1:length(mylist)){
+  PeakSummary <- rbind(PeakSummary, c(length(mylist[[i]]), mean(mylist[[i]]))) 
+}
+colnames(PeakSummary) = c("Peak_nb_windows","Mean_GAskewing_overall_peak")
+
+# With the information about average GAskewing value, we can sort the peaks in PeakSummarySorted:
+# This will let us go through the sorted list, and access the index of the peaks to plot them in a sorted fashion
+PeakSummarySorted <- PeakSummary[order(PeakSummary$Mean_GAskewing_overall_peak),]
+
+# Define now the palette of colours, you can choose, either white as intermediate or lightgrey (you can refer to the colour chart for R)
+tmpcolf<-colorRampPalette(c("blue","lightblue","white","white","orange","red"))
+#tmpcolf<-colorRampPalette(c("blue","lightblue","lightgrey","lightgrey","orange","red"))
+# And from there, assign the colour values (scaled to 1000) to vector r, later accessed and red to display the matching colour of the window in the peak
+r <- tmpcolf(1000)
+
+# If you want to plot the scale of colour in the same chart, we split its area in 2:
+par(mfrow=c(1,2))
+# ... and we display the scale of colours:
+plot(rep(0, 1000), seq(0,1, length.out=1000), col=r, pch = 15, xlim=0:1, ylab="GA content ratio", bty="n:", xaxt="n", xlab="")
+
+# And now we loop to display the collection of peaks stacked one on top of the other:
+for(i in 1:length(mylist)){         # Loop for the number of peaks (i.e. length of the list 'mylist')
+  
+  # First read the current peak to be displayed, by loading the index (PeakNb) of the current peak from the sorted GAskew Peak, and from this index access its values in 'mylist'
+  peakNb <- as.numeric(row.names(PeakSummarySorted[i,]))
+  peak <-mylist[[peakNb]]
+  
+  #Then assign to the values of peak their colour from the scale (r)
+  mult = (peak*(1000-1))+1
+  colours = r[mult]
+  
+  #par(new=TRUE) allows us to add an extra plot in the same current chart
+  par(new=TRUE)
+  
+  # Finally plots each Peak centered around x=0. xlim and ylim are to be set when the size of mylist changes
+  plot(((length(peak)/-2):(length(peak)/2)), y=rep(1+(i/2),length(peak)+1), xlim=c(-200,200),pch = '_', col=r[mult], ylim=c(0,2000), bty="n", xaxt="n", xlab="", yaxt="n", ylab="")#, label=PeakNames[i]  )
+  # And add the materialisation of the center of the peaks with a black line at x=0:
+  abline(v=0,col=1,lty=1)
+}
+
+
+
+
+
+#################Perl Script to calculate GA Skewing for Figure 7:
+
+#!/usr/bin/perl
+
+open (PEAKS,"/Users/Blackbull/Documents/PostDoc_Work_Einstein/Julie\'s\ project/Sequences_peaks_No_Ns.fa") or die "Unable to open the file containing the sequences of the peaks.\n";
+open (RES,">/Users/Blackbull/Documents/PostDoc_Work_Einstein/Julie\'s\ project/Results_GAskew_peaks.txt") or die "Impossible to open the output file.\n";
+#open (NOUTPUT,">/Users/Blackbull/Documents/PostDoc_Work_Einstein/Julie\'s\ project/Peaks_with_Ns.txt") or die "Impossible to open the output file.\n";
+
+# Define the Window Size and overlap you wish...
+$WindowSize=25;
+$overlap=10;
+$prevCmtLine = "";
+
+#Then read the complete fasta file of sequences, line by line.
+while(<PEAKS>)
+{
+	# For each line in the fasta file, if it is not a comment line (starting by ">") then it is a sequence that we concatenate in a variable to be treated afterward
+	if ($_ =~ /^[^>].*/)
+	{
+		$PeakSeq = 1;
+		chomp($_);
+		$Seq=$Seq.$_;
+	}
+
+	# If the current line is a comment line, it contains Peak ID etc... we store it and we also process the calculation of GAcontent for the previous sequence.
+	if ($_=~/^>.*/)
+	{	
+		#re-initialise the variable storing the GAskewing value from the calculation of the previous iteration.
+		$GAcount = 0;
+		
+		## When meets a comment line, the previous Sequence is complete, so we start processing it...
+		if ($PeakSeq == 1)
+		{
+			# Treat the comment line to extract the ID of the peak (in $PeakNb[6]
+			my @SectionCmtLine = split(' ', $PeakCmtLine);
+			my @PeakNb = split('_', $SectionCmtLine[0]);
+			#print "Peak".$PeakNb[6];
+			
+			# Get the length of the sequence of the peak
+			$LengthSeq = length($Seq);
+			# And start to build the line to write in the output file (RES), but starting with first column, ie the peak ID
+			$LineToPrint = "Peak_".$PeakNb[6];
+			
+			############# DO the algo for the window #########
+			# For each of the windows, starting from position 0 with size previously specified and moving with the overlap:
+ 			for (my $Position=0; $Position<$LengthSeq; $Position+=($WindowSize - $overlap))
+			{
+				# Extract the subsequence of the peak within the current window (function substr)
+				my $WindowSeq =  substr $Seq, $Position, $WindowSize;
+				
+				# ... and then call the function (found below) that calculates from the Sequence of the window the GA content, and stores the result in $GAratio
+				$GAratio = Calcul_GA($WindowSeq);
+				
+				# Build line to print, by adding the current GA ratio in another column
+				$LineToPrint = $LineToPrint."\t".$GAratio;
+				
+				# Finally, if we hit the end, with a window size smaller than what it should be, we break the loop
+				if(length($WindowSeq)<$WindowSize)
+				{
+					last;
+				}
+				
+			}
+			# Finalise the Line to print and add it to the output file
+			chomp($LineToPrint);
+			$LineToPrint = $LineToPrint."\n";
+			
+			print RES $LineToPrint;
+
+			
+		}
+		
+		# Reinitialise the variable before looping to next iteration.
+		$PeakCmtLine = $_;
+		$Seq = "";
+		
+		
+	}
+	
+}
+
+
+#For last line of last sequence, we repeat the same thing, otherwise, the loop skips it:
+$GAcount = 0;
+my @SectionCmtLine = split(' ', $PeakCmtLine);
+                        my @PeakNb = split('_', $SectionCmtLine[0]);
+                        #print "Peak".$PeakNb[6];
+
+                        $LengthSeq = length($Seq);
+                        $LineToPrint = "Peak_".$PeakNb[6];
+                        ############# DO the algo for the window
+                        for (my $Position=0; $Position<$LengthSeq; $Position+=$overlap)
+                        {
+                                my $WindowSeq =  substr $Seq, $Position, $WindowSize;
+                                #print $PeakCmtLine;
+                                #print "$WindowSeq\n";
+
+                                $GAratio = Calcul_GA($WindowSeq);
+
+                                # Build line to print
+                                $LineToPrint = $LineToPrint."\t".$GAratio;
+
+                                if(length($WindowSeq)<$WindowSize)
+                                {
+                                        last;
+                                }
+
+                        }
+                        chomp($LineToPrint);
+                        $LineToPrint = $LineToPrint."\n";
+
+
+                        print RES $LineToPrint;
+
+##### End for last sequence
+
+# Now finalise by closing all the files
+close RES;
+close PEAKS;
+
+
+
+
+############# Sub routine to count the GA skewing
+
+sub Calcul_GA
+{
+	# Firstly, initialise all the counters and stores the sequence of the window to treat in $SubSeqToCount:
+	$SubSeqToCount = $_[0];
+	$Acount = 0;
+	$Gcount = 0;
+	$Ccount = 0;
+	$Tcount = 0;
+	$GAcount = 0;
+	$Totcount = 0;
+	$GAratio = 0;
+	
+	# ... and then we go through every single nucleotide and verify which letter it is:
+	for($i=0; $i < $WindowSize; $i++)
+	{
+		# Stores the current single nucleotide in $Nucleotide
+		$Nucleotide = (substr $SubSeqToCount, $i, 1);
+		
+		# ... and compares it to A,C,T,G. When it matches one of them, its corresponding counter increments.
+		if ($Nucleotide eq "A")
+		{$Acount++;}
+		
+		if ($Nucleotide eq "C")
+                {$Ccount++;}
+		
+		if ($Nucleotide eq "T")
+                {$Tcount++;}
+		
+		if ($Nucleotide eq "G")
+                {$Gcount++;}
+	}
+	# We finally store the addition of As and Gs in GAcount
+	$GAcount = $Acount + $Gcount;
+	# and we get the total number of nucleotides by their addition
+	$Totcount = $Acount + $Gcount + $Tcount + $Ccount;
+	# to obtain the ratio that is GA/ACTG:
+	$GAratio = $GAcount/$Totcount;
+	# and return this ratio:
+	return $GAratio;
+}
+

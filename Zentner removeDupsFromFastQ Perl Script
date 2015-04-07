@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+open(OUT, ">OUT$ARGV[$0]");
+open(DUPS,">duplicates.fq"); 
+
+$unique=0; 
+$total=0;  
+$prev=0;  
+$line=0;
+$id_found=0;  
+while(<>){ 
+if((/^@\S+/) & $line%4==0){
+
+$id_found=1;
+$prev=$_;
+$total++;
+
+}
+elsif($id_found) {
+
+
+if (! ($seen{$_}++)){
+$unique++; 
+$print_it = 1; 
+print OUT $prev; 
+print OUT $_ ;
+
+}
+else{
+$print_it = 0;
+print DUPS $prev; 
+print DUPS $_ ;
+
+}
+$id_found=0;
+}
+
+else{
+if ($print_it){ 
+print  OUT $_;
+}
+else{
+print DUPS $_;
+
+}
+
+}
+
+$line++;
+}
+$num_dups= $total-$unique;
+print "\nChose $unique unique FASTQ records out of $total total (Found $num_dups duplicates).\n";
