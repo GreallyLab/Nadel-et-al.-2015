@@ -44,6 +44,3 @@ dev.off()
 data:  RDIPMeth[, 12] and Meth[, 4] 
 D = 0.0722, p-value < 2.2e-16
 alternative hypothesis: two-sided 
-
-
-bw = "nrd0" 
