@@ -218,3 +218,34 @@ TCSkew<-subset(TSkew, TSkew[,9]<0)
 #This file was too large to make a pdf. 
 
 
+
+#From script: "Determining RNA Strand and Minus10 files"
+#Plotting Figure based on skewing and strandedness relationship (Figure #4b)
+library(scales)
+pdf("~/skewingstrandednessscatterplot.pdf")
+plot(IMR90[,7], IMR90[,8], cex=.2,  col=alpha("black", 0.1))
+abline(v=-0.6363636)
+abline(v=0.4545455)
+dev.off()
+pdf("~/densityplotskewingstranded.pdf")
+par(mfrow=c(2,2))
+plot(density(IMR90minus10[,7]))
+plot(density(IMR90[,7]))
+abline(v=-0.6363636)
+abline(v=0.4545455)
+plot(density(IMR90minus10[,8]))
+plot(density(IMR90[,8]))
+dev.off()
+write.table(IMR90minus10, "~/SecondStrandCounts/IMR90minus10", , row.names=F, col.names=F, sep="\t", quote=F)
+write.table(HEKminus10, "~/SecondStrandCounts/HEKminus10", , row.names=F, col.names=F, sep="\t", quote=F)
+
+#A description of the columns of SecondStrandCounts/IMR90minus10 and SecondStrandCounts/HEKminus10
+#V1 - peak chr
+#V2 - peak start
+#V3 - peak stop
+#V4 - peak name
+#V5 - number of reads aligned to the positive strand
+#V6 - number of reads aligned to the negative strand
+#V7 - strandedness value
+#V8 - skewing value
+
