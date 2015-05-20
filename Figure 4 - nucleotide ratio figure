@@ -2,8 +2,8 @@
 
 
 #Dividing the genome into 100bp windows to assess the skewing of those windows
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/windowMaker -g hg19/hg19_chrInfo.txt -w 99 > hg19/GenomeWindows100bp.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools windowMaker -g hg19/hg19_chrInfo.txt -w 99 > hg19/GenomeWindows100bp.bed
 
 #The following analysis was performed in R v. 2.15.0
 windows<-read.table("~/hg19/GenomeWindows100bp.bed", stringsAsFactors=F)
@@ -189,8 +189,8 @@ dev.off()
 
 #Compared to Genome wide:
 #Remove gaps:
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/subtractBed -a hg19/GenomeWindows100bpNucleotideCounts -b RDIP1/hektracks/gaps.bed > hg19/GenomeWindows100bpNucleotideCountsNoGaps.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools subtractBed -a hg19/GenomeWindows100bpNucleotideCounts -b RDIP1/hektracks/gaps.bed > hg19/GenomeWindows100bpNucleotideCountsNoGaps.bed
 
 #The following analysis was performed in R v. 2.15.0
 windows<-read.table("~/hg19/GenomeWindows100bpNucleotideCountsNoGaps.bed", stringsAsFactors=F)

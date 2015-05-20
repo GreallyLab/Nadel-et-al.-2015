@@ -1,24 +1,24 @@
 ################Determining strand of RNA in RNA:DNA hybrid from RDIP-seq################
 
 #To determine which strand the RNA of the RNA:DNA hybrid was, we used the samtools bit flags because of our strand-specific sequencing
-#bedtools "current" refers to Bedtools v2.16.2
-#samtools "current" refers to Samtools v.0.1.18
+#bedtools refers to Bedtools v2.16.2
+#samtools refers to Samtools v.0.1.18
 
 #Getting all reads that use the bit flag 147 or 163, which are both: 1) read paired, 2) proper pair, 3) second in pair 
 #with 147 also being 4) read reverse strand, and 163 being 4) mate reverse strand
-/apps1/samtools/current/samtools view HekRDIP2/orgfiles/HekRDIP.bam.sorted.bam| awk '{ if ($2==147 || $2==163) print }' > HEKreadssecondpair.sam
-/apps1/samtools/current/samtools view -Sb HEKreadssecondpair.sam > HEKreadssecondpair.bam
-/apps1/bedtools/current/bamToBed -i HEKreadssecondpair.bam > HEKreadssecondpair.bed
+samtools view HekRDIP2/orgfiles/HekRDIP.bam.sorted.bam| awk '{ if ($2==147 || $2==163) print }' > HEKreadssecondpair.sam
+samtools view -Sb HEKreadssecondpair.sam > HEKreadssecondpair.bam
+bedtools bamToBed -i HEKreadssecondpair.bam > HEKreadssecondpair.bed
 
 #Intersecting called peaks with RNA strand specific reads
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a ~/HekRDIP2/HekRDIP2P_Peaks_Skewing_summary.bed -b ~/HEKreadssecondpair.bed -wao > ~/HEKreadssecondpairInRDIP.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a ~/HekRDIP2/HekRDIP2P_Peaks_Skewing_summary.bed -b ~/HEKreadssecondpair.bed -wao > ~/HEKreadssecondpairInRDIP.bed
 
 #Repeating for IMR90 reads and peaks
-/apps1/samtools/current/samtools view Imr90RDIP/orgfiles/Imr90RDIP.bam.sorted.bam | awk '{ if ($2==147 || $2==163) print }' > IMR90readssecondpair.sam
-/apps1/samtools/current/samtools view -Sb IMR90readssecondpair.sam > IMR90readssecondpair.bam
-/apps1/bedtools/current/bamToBed -i IMR90readssecondpair.bam > IMR90readssecondpair.bed
-/apps1/bedtools/current/intersectBed -a ~/Imr90RDIP/Imr90RDIP_Peaks_Skewing_Summary.bed -b ~/IMR90readssecondpair.bed -wao > ~/IMR90readssecondpairInRDIP.bed
+samtools view Imr90RDIP/orgfiles/Imr90RDIP.bam.sorted.bam | awk '{ if ($2==147 || $2==163) print }' > IMR90readssecondpair.sam
+samtools view -Sb IMR90readssecondpair.sam > IMR90readssecondpair.bam
+bedtools bamToBed -i IMR90readssecondpair.bam > IMR90readssecondpair.bed
+bedtools intersectBed -a ~/Imr90RDIP/Imr90RDIP_Peaks_Skewing_Summary.bed -b ~/IMR90readssecondpair.bed -wao > ~/IMR90readssecondpairInRDIP.bed
 
 
 

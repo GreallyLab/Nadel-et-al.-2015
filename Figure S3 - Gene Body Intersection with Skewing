@@ -1,7 +1,7 @@
 #Intersecting gene bodies with RDIP-seq "Minus 10" datasets to create dataset for this figure:
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/HEKminus10 -b RDIP1/hektracks/GeneBody.bed -wo > SecondStrandCounts/HEKminus10geneBodies.bed
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/GeneBody.bed -wo > SecondStrandCounts/IMR90minus10GeneBodies.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a SecondStrandCounts/HEKminus10 -b RDIP1/hektracks/GeneBody.bed -wo > SecondStrandCounts/HEKminus10geneBodies.bed
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/GeneBody.bed -wo > SecondStrandCounts/IMR90minus10GeneBodies.bed
 #The following analysis was performed in R v. 2.15.0
 IMR90<-read.table("~/SecondStrandCounts/IMR90minus10GeneBodies.bed", stringsAsFactors=F)
 HEK<-read.table("~/SecondStrandCounts/HEKminus10geneBodies.bed", stringsAsFactors=F)

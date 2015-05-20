@@ -62,9 +62,9 @@ sed -n '50605099,51594659p' hg19/hg19rDNA2.fa > chrY.fa
 cat chr1.fa chr2.fa chr3.fa chr4.fa chr5.fa chr6.fa chr7.fa chr8.fa chr9.fa chr10.fa chr11.fa chr12.fa chr13.fa chr14.fa chr15.fa chr16.fa chr17.fa chr18.fa chr19.fa chr20.fa chr21.fa chr22.fa chrX.fa chrY.fa > hg19/hg19rDNA2.fa 
 
 #Transforming the RDIP-seq and input files from bam to fastq to align to the rDNA+genome fasta file
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/bedtools bamtofastq -i Imr90RDIP/orgfiles/Imr90Input.bam -fq Imr90RDIP/orgfiles/Imr90Input.fastq
-/apps1/bedtools/current/bedtools bamtofastq -i Imr90RDIP/orgfiles/Imr90RDIP.bam -fq Imr90RDIP/orgfiles/Imr90RDIP.fastq
+#bedtools refers to Bedtools v2.16.2
+bedtools bamtofastq -i Imr90RDIP/orgfiles/Imr90Input.bam -fq Imr90RDIP/orgfiles/Imr90Input.fastq
+bedtools bamtofastq -i Imr90RDIP/orgfiles/Imr90RDIP.bam -fq Imr90RDIP/orgfiles/Imr90RDIP.fastq
 cp Imr90RDIP/orgfiles/Imr90RDIP.fastq Zentner/
 cp Imr90RDIP/orgfiles/Imr90Input.fastq Zentner/
 
@@ -83,15 +83,15 @@ OUTImr90RDIP.fastq
 #Settings:
 # -m is number of possible alignments, set to 1, only allowing unique alignments
 # -n is is number of mismatches allowed, set to 2 to allow for 2 potential nucleotide mismatches
-/apps1/bowtie/current/bowtie -m 1 -n 2 -q ~/hg19/hg19rDNA2index OUTImr90Input.fastq -S ~/OUTImr90Input.sam
-/apps1/bowtie/current/bowtie -m 1 -n 2 -q ~/hg19/hg19rDNA2index ~/Zentner/OUTImr90RDIP.fastq -S ~/OUTImr90RDIP.sam
+bowtie -m 1 -n 2 -q ~/hg19/hg19rDNA2index OUTImr90Input.fastq -S ~/OUTImr90Input.sam
+bowtie -m 1 -n 2 -q ~/hg19/hg19rDNA2index ~/Zentner/OUTImr90RDIP.fastq -S ~/OUTImr90RDIP.sam
 #Changing SAM output files to BED files
-#samtools "current" refers to Samtools v.0.1.18
-/apps1/samtools/current/samtools view -Sb OUTImr90Input.sam > OUTImr90Input.bam
-/apps1/samtools/current/samtools view -Sb OUTImr90RDIP.sam > OUTImr90RDIP.bam
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/bamToBed -i OUTImr90Input.bam > OUTImr90Input.bed
-/apps1/bedtools/current/bamToBed -i OUTImr90RDIP.bam > OUTImr90RDIP.bed
+#samtools refers to Samtools v.0.1.18
+samtools view -Sb OUTImr90Input.sam > OUTImr90Input.bam
+samtools view -Sb OUTImr90RDIP.sam > OUTImr90RDIP.bam
+#bedtools refers to Bedtools v2.16.2
+bedtools bamToBed -i OUTImr90Input.bam > OUTImr90Input.bed
+bedtools bamToBed -i OUTImr90RDIP.bam > OUTImr90RDIP.bed
 #Calling peaks using fseq - creating wiggle track
 #Settings: 
 # -f is fragment size, set to 200
@@ -200,11 +200,11 @@ perl ./removeDupFromFastQ.pl I3A-R.fastq
 Chose 8609678 unique FASTQ records out of 65491999 total (Found 56882321 duplicates).
 OUTI3A-R.fastq
 #Aligning reads with bowtie to genome+rDNA fasta
-/apps1/bowtie/current/bowtie -m 1 -n 2 -q ~/hg19/hg19rDNAindex OUTI3A-R.fastq -S ~/OUTI3A-R.sam
-#samtools "current" refers to Samtools v.0.1.18
-/apps1/samtools/current/samtools view -Sb OUTI3A-R.sam > OUTI3A-R.bam
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/bamToBed -i OUTI3A-R.bam > OUTI3A-R.bed
+bowtie -m 1 -n 2 -q ~/hg19/hg19rDNAindex OUTI3A-R.fastq -S ~/OUTI3A-R.sam
+#samtools refers to Samtools v.0.1.18
+samtools view -Sb OUTI3A-R.sam > OUTI3A-R.bam
+#bedtools refers to Bedtools v2.16.2
+bedtools bamToBed -i OUTI3A-R.bam > OUTI3A-R.bed
 #Calling peaks using fseq - creating wiggle track
 mkdir OUTI3A-RChr
 ~/fseq2/bin/fseq -f 200 -of wig OUTI3A-R.bed -o OUTI3A-RChr

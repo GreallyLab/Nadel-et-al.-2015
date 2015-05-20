@@ -34,21 +34,21 @@ colnames(Minus1point5kb)<-colnames(RefSeq)
 ToBeInterGenic<-rbind(RefSeq, Minus1point5kb, lncRNA)
 write.table(ToBeInterGenic, "~/RDIP1/hektracks/TobeInterGeniclncRNA.bed", row.names=F, col.names=F, sep="\t", quote=F)
 
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/complementBed -g ~/fakechrfile -i RDIP1/hektracks/TobeInterGeniclncRNA.bed > RDIP1/hektracks/Intergenic1500upstreamlncRNA.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools complementBed -g ~/fakechrfile -i RDIP1/hektracks/TobeInterGeniclncRNA.bed > RDIP1/hektracks/Intergenic1500upstreamlncRNA.bed
 
 #Intersecting the following groups with IMR90 RDIP-seq peak (minus 10) datasets
-#bedtools "current" refers to Bedtools v2.16.2
+#bedtools refers to Bedtools v2.16.2
 #1.5kb upstream to TSS
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Minus1point5kb.bed -wa > PieDeliciousness/Fig13/RDIPMinus1point5
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Minus1point5kb.bed -wa > PieDeliciousness/Fig13/RDIPMinus1point5
 #TSS to 1.5kb into the gene
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Plus1point5kb.bed -wa > PieDeliciousness/Fig13/RDIPPlus1point5
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Plus1point5kb.bed -wa > PieDeliciousness/Fig13/RDIPPlus1point5
 #RefSeq gene not including TSS+1.5kb
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Intergenic1500upstreamlncRNA.bed -wa > PieDeliciousness/Fig13/RDIPIntergenicNolncRNA
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Intergenic1500upstreamlncRNA.bed -wa > PieDeliciousness/Fig13/RDIPIntergenicNolncRNA
 #Intergenic space (not including 1.5kb upstream of TSS or lncRNA)
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b PieDeliciousness/Fig13/RefSeqnoTssdownstream -wa > PieDeliciousness/Fig13/RDIPRefSeq
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b PieDeliciousness/Fig13/RefSeqnoTssdownstream -wa > PieDeliciousness/Fig13/RDIPRefSeq
 #lncRNA
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/lncRNA.bed -wa > PieDeliciousness/Fig13/RDIPlncRNA
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/lncRNA.bed -wa > PieDeliciousness/Fig13/RDIPlncRNA
 
 #Getting counts of RDIP-seq peaks that intersect with the above genomic features
 MinusTSS<-read.table("~/PieDeliciousness/Fig13/RDIPMinus1point5", stringsAsFactors=F)
@@ -142,12 +142,12 @@ RDIP<-cbind(RDIP, RDIP[,3]-RDIP[,2])
 [1] 37409999
 
 #To get intergenic space:
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/complementBed -i RDIP1/hektracks/gaps.bed -g fakechrfile > RDIP1/hektracks/nogaps.bed
-/apps1/bedtools/current/subtractBed -a RDIP1/hektracks/nogaps.bed -b RDIP1/hektracks/RefSeq.bed > RDIP1/hektracks/nogapsNoGenes.bed
-/apps1/bedtools/current/subtractBed -a RDIP1/hektracks/nogapsNoGenes.bed -b RDIP1/hektracks/lncRNA.bed > RDIP1/hektracks/nogapsNoGenesnoLNCRNA.bed
-/apps1/bedtools/current/subtractBed -a RDIP1/hektracks/nogapsNoGenesnoLNCRNA.bed -b RDIP1/hektracks/Prom4kb.bed > RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed -wao > Imr90RDIP/Intersects/minus10/IntergenicRDIP.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools complementBed -i RDIP1/hektracks/gaps.bed -g fakechrfile > RDIP1/hektracks/nogaps.bed
+bedtools subtractBed -a RDIP1/hektracks/nogaps.bed -b RDIP1/hektracks/RefSeq.bed > RDIP1/hektracks/nogapsNoGenes.bed
+bedtools subtractBed -a RDIP1/hektracks/nogapsNoGenes.bed -b RDIP1/hektracks/lncRNA.bed > RDIP1/hektracks/nogapsNoGenesnoLNCRNA.bed
+bedtools subtractBed -a RDIP1/hektracks/nogapsNoGenesnoLNCRNA.bed -b RDIP1/hektracks/Prom4kb.bed > RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed -wao > Imr90RDIP/Intersects/minus10/IntergenicRDIP.bed
 Intergenic<-read.table("~/RDIP1/hektracks/nogapsNoGenesnoLNCRNAnoProm.bed", stringsAsFactors=F)
 Intergenic<-cbind(Intergenic, Intergenic[,3]-Intergenic[,2])
 > sum(Intergenic[,4])
@@ -155,17 +155,17 @@ Intergenic<-cbind(Intergenic, Intergenic[,3]-Intergenic[,2])
 
 
 #Intersecting RNA:DNA hybrids of IMR90 cells with genomic features to get observed nucleotide intersect
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/CpGIslands.bed -wao > Imr90RDIP/Intersects/minus10/CpGIslandsImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/RefSeqNorepeats.bed -wao > Imr90RDIP/Intersects/minus10/RefSeqImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/RepeatMasker.bed -wao > Imr90RDIP/Intersects/minus10/RepeatMaskerImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Prom4kbNoRepeats.bed -wao > Imr90RDIP/Intersects/minus10/RefSeqProm2kbImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/lncRNA.bed -wao > Imr90RDIP/Intersects/minus10/lncRNAsImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/intergenicspace.bed -wao > Imr90RDIP/Intersects/minus10/intergenicspaceImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/interRefSeqgenicspace.bed -wao > Imr90RDIP/Intersects/minus10/interRefSeqgenicspaceImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/DNase.bed -wao > Imr90RDIP/Intersects/minus10/DNaseImr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/pol2.bed -wao > Imr90RDIP/Intersects/minus10/pol2Imr90RDIP
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b SecondStrandCounts/HEKminus10 -wao > Imr90RDIP/Intersects/minus10/HEKImr90RDIP
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/CpGIslands.bed -wao > Imr90RDIP/Intersects/minus10/CpGIslandsImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/RefSeqNorepeats.bed -wao > Imr90RDIP/Intersects/minus10/RefSeqImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/RepeatMasker.bed -wao > Imr90RDIP/Intersects/minus10/RepeatMaskerImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/Prom4kbNoRepeats.bed -wao > Imr90RDIP/Intersects/minus10/RefSeqProm2kbImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/lncRNA.bed -wao > Imr90RDIP/Intersects/minus10/lncRNAsImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/intergenicspace.bed -wao > Imr90RDIP/Intersects/minus10/intergenicspaceImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/interRefSeqgenicspace.bed -wao > Imr90RDIP/Intersects/minus10/interRefSeqgenicspaceImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/DNase.bed -wao > Imr90RDIP/Intersects/minus10/DNaseImr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b RDIP1/hektracks/pol2.bed -wao > Imr90RDIP/Intersects/minus10/pol2Imr90RDIP
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b SecondStrandCounts/HEKminus10 -wao > Imr90RDIP/Intersects/minus10/HEKImr90RDIP
 
 #The following analysis was performed in R v. 2.15.0
 HEKIMR90RDIP<-read.table("~/Imr90RDIP/Intersects/minus10/HEKImr90RDIP", stringsAsFactors=F)
@@ -280,8 +280,8 @@ write.table(chr, "~/fakechrfile", row.names=F, col.names=F, sep="\t", quote=F)
 ### And those new 100 files are intersected with the genomic feature to look for nucleotide intersection enrichment or depletion with RDIP peaks
 #Bed shuffling analysis based on:
 # -g fakechrfile represents possible spaces in the genome to be shuffled excluding gaps
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/shuffleBed -i SecondStrandCounts/IMR90minus10 -g fakechrfile -excl RDIP1/hektracks/gaps.bed > shuffledRDIP1.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools shuffleBed -i SecondStrandCounts/IMR90minus10 -g fakechrfile -excl RDIP1/hektracks/gaps.bed > shuffledRDIP1.bed
 
 #The following analysis was performed in R v. 2.15.0
 #Permutation tests

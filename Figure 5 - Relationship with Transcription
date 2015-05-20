@@ -186,11 +186,11 @@ write.table(PlusTESFlank, file="~/RNAseqIMR90/IMR90TESPos15kbflankNoRepeats", ro
 write.table(MinusTESFlank, file="~/RNAseqIMR90/IMR90TESNeg15kbflankNoRepeats", row.names=F, col.names=F, sep="\t", quote=F)
 
 #Intersecting gene bodies (and surrounding area) windows with the RDIP peak files
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeatsRDIP
-/apps1/bedtools/current/intersectBed -a RNAseqIMR90/IMR90TSSPos15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSPos15kbflankNoRepeatsRDIP
-/apps1/bedtools/current/intersectBed -a RNAseqIMR90/IMR90TESPos15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TESPos15kbflankNoRepeatsRDIP
-/apps1/bedtools/current/intersectBed -a RNAseqIMR90/IMR90TESNeg15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TESNeg15kbflankNoRepeatsRDIP
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeatsRDIP
+bedtools intersectBed -a RNAseqIMR90/IMR90TSSPos15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSPos15kbflankNoRepeatsRDIP
+bedtools intersectBed -a RNAseqIMR90/IMR90TESPos15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TESPos15kbflankNoRepeatsRDIP
+bedtools intersectBed -a RNAseqIMR90/IMR90TESNeg15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TESNeg15kbflankNoRepeatsRDIP
 
 
 #The following analysis was performed in R v. 2.15.0
@@ -404,9 +404,9 @@ levels(TSS5kbflank[,4])[order(as.numeric(levels(TSS5kbflank[,4])))]<-199:0
 write.table(TSS5kbflank, file="~/RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeats", row.names=F, col.names=F, sep="\t", quote=F, append=T)
 
 #Intersecting with gene bodies
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeatsRDIP
-/apps1/bedtools/current/intersectBed -a RNAseqIMR90/IMR90TSSPos15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSPos15kbflankNoRepeatsRDIP
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeatsRDIP
+bedtools intersectBed -a RNAseqIMR90/IMR90TSSPos15kbflankNoRepeats -b SecondStrandCounts/IMR90minus10 -wo > RNAseqIMR90/IMR90TSSPos15kbflankNoRepeatsRDIP
 
 cat RNAseqIMR90/IMR90TSSNeg15kbflankNoRepeatsRDIP RNAseqIMR90/IMR90TSSPos15kbflankNoRepeatsRDIP > RNAseqIMR90/IMR90TSS15kbflankNoRepeatsRDIP
 

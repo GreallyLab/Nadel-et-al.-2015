@@ -275,17 +275,17 @@ write.table(HEK100, "~/RNAseqHEK/HEK100", row.names=F, col.names=F, sep="\t", qu
 #V7 - strand of gene
 
 #Intersecting RDIP files with RNAseq:
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEKzero -wo > Intersects/HekRDIP2HEKzero
-/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK25 -wo > Intersects/HekRDIP2HEK25
-/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK50 -wo > Intersects/HekRDIP2HEK50
-/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK75 -wo > Intersects/HekRDIP2HEK75
-/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK100 -wo > Intersects/HekRDIP2HEK100
-/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR90Zero -wo > Intersects/Imr90RDIPIMR90Zero
-/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9025 -wo > Intersects/Imr90RDIPIMR9025
-/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9050 -wo > Intersects/Imr90RDIPIMR9050
-/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9075 -wo > Intersects/Imr90RDIPIMR9075
-/apps1/bedtools/current/intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR90100 -wo > Intersects/Imr90RDIPIMR90100
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEKzero -wo > Intersects/HekRDIP2HEKzero
+bedtools intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK25 -wo > Intersects/HekRDIP2HEK25
+bedtools intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK50 -wo > Intersects/HekRDIP2HEK50
+bedtools intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK75 -wo > Intersects/HekRDIP2HEK75
+bedtools intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b RNAseqHEK/HEK100 -wo > Intersects/HekRDIP2HEK100
+bedtools intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR90Zero -wo > Intersects/Imr90RDIPIMR90Zero
+bedtools intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9025 -wo > Intersects/Imr90RDIPIMR9025
+bedtools intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9050 -wo > Intersects/Imr90RDIPIMR9050
+bedtools intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR9075 -wo > Intersects/Imr90RDIPIMR9075
+bedtools intersectBed -a Imr90RDIP/Imr90RDIP_peaks.bed -b RNAseqIMR90/IMR90100 -wo > Intersects/Imr90RDIPIMR90100
 
 #Combining files back into one file with expression levels listed:
 IMR90Zero<-read.table("~/RNAseqIMR90/IMR90Zero", stringsAsFactors=F)

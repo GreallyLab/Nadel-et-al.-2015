@@ -12,22 +12,22 @@ http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10733/
 http://wasp.einstein.yu.edu/results/production_wiki/JGreally/JNadel/P542/J10733/processed/10733-2.bam
 
 #Remove duplicates using Samtools rmdup
-#samtools "current" refers to Samtools v.0.1.18
-/apps1/samtools/current/samtools rmdup HekRDIP2/orgfiles/HekInput.AH7R1YADXX.lane_2_PM_I6.hg19.alignment.bam HekRDIP2/orgfiles/HekInput.bam
-/apps1/samtools/current/samtools rmdup HekRDIP2/orgfiles/HekRDIP.AH7R1YADXX.lane_2_PM_I12.hg19.alignment.bam HekRDIP2/orgfiles/HekRDIP.bam
-/apps1/samtools/current/samtools rmdup Imr90RDIP/orgfiles/Imr90Input.AH7R1YADXX.lane_2_PM_I5.hg19.alignment.bam Imr90RDIP/orgfiles/Imr90Input.bam
-/apps1/samtools/current/samtools rmdup Imr90RDIP/orgfiles/Imr90RDIP.AH7R1YADXX.lane_2_PM_I19.hg19.alignment.bam Imr90RDIP/orgfiles/Imr90RDIP.bam
-/apps1/samtools/current/samtools rmdup RDIPRound2/10733-1.bam RDIPRound2/Hek1Input.bam
-/apps1/samtools/current/samtools rmdup RDIPRound2/10733-2.bam RDIPRound2/Hek1RDIP.bam
+#samtools refers to Samtools v.0.1.18
+samtools rmdup HekRDIP2/orgfiles/HekInput.AH7R1YADXX.lane_2_PM_I6.hg19.alignment.bam HekRDIP2/orgfiles/HekInput.bam
+samtools rmdup HekRDIP2/orgfiles/HekRDIP.AH7R1YADXX.lane_2_PM_I12.hg19.alignment.bam HekRDIP2/orgfiles/HekRDIP.bam
+samtools rmdup Imr90RDIP/orgfiles/Imr90Input.AH7R1YADXX.lane_2_PM_I5.hg19.alignment.bam Imr90RDIP/orgfiles/Imr90Input.bam
+samtools rmdup Imr90RDIP/orgfiles/Imr90RDIP.AH7R1YADXX.lane_2_PM_I19.hg19.alignment.bam Imr90RDIP/orgfiles/Imr90RDIP.bam
+samtools rmdup RDIPRound2/10733-1.bam RDIPRound2/Hek1Input.bam
+samtools rmdup RDIPRound2/10733-2.bam RDIPRound2/Hek1RDIP.bam
 
 #Sort and index BAM files to make them into BED files:
-#samtools "current" refers to Samtools v.0.1.18
-/apps1/samtools/current/samtools sort  HekRDIP2/orgfiles/HekInput.bam HekRDIP2/orgfiles/HekInput.bam.sorted
-/apps1/samtools/current/samtools sort  HekRDIP2/orgfiles/HekRDIP.bam HekRDIP2/orgfiles/HekRDIP.bam.sorted
-/apps1/samtools/current/samtools sort  Imr90RDIP/orgfiles/Imr90Input.bam Imr90RDIP/orgfiles/Imr90Input.bam.sorted
-/apps1/samtools/current/samtools sort  Imr90RDIP/orgfiles/Imr90RDIP.bam Imr90RDIP/orgfiles/Imr90RDIP.bam.sorted
-/apps1/samtools/current/samtools sort RDIPRound2/Hek1Input.bam RDIPRound2/Hek1Input.bam.sorted
-/apps1/samtools/current/samtools sort RDIPRound2/Hek1RDIP.bam RDIPRound2/Hek1RDIP.bam.sorted
+#samtools refers to Samtools v.0.1.18
+samtools sort  HekRDIP2/orgfiles/HekInput.bam HekRDIP2/orgfiles/HekInput.bam.sorted
+samtools sort  HekRDIP2/orgfiles/HekRDIP.bam HekRDIP2/orgfiles/HekRDIP.bam.sorted
+samtools sort  Imr90RDIP/orgfiles/Imr90Input.bam Imr90RDIP/orgfiles/Imr90Input.bam.sorted
+samtools sort  Imr90RDIP/orgfiles/Imr90RDIP.bam Imr90RDIP/orgfiles/Imr90RDIP.bam.sorted
+samtools sort RDIPRound2/Hek1Input.bam RDIPRound2/Hek1Input.bam.sorted
+samtools sort RDIPRound2/Hek1RDIP.bam RDIPRound2/Hek1RDIP.bam.sorted
 samtools index HekRDIP2/HekInput.bam.sorted.bam
 samtools index HekRDIP2/HekRDIP.bam.sorted.bam
 samtools index Imr90RDIP/Imr90Input.bam.sorted.bam
@@ -36,16 +36,14 @@ samtools index RDIPRound2/Hek1Input.bam.sorted.bam
 samtools index RDIPRound2/Hek1RDIP.bam.sorted.bam
 
 #Peak Calling using MACS v. 1.4.2
-source /apps1/modules/init/bash
-module load macs/1.4.2
 #Settings:
 # -t Is treatment file
 # -c is Control file
 # -bw is band width, set to 200
-/apps1/macs/1.4.2/bin/macs14 -t Imr90RDIP/Imr90RDIP.bam.sorted.bam -c Imr90RDIP/Imr90Input.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name Imr90RDIP
-/apps1/macs/1.4.2/bin/macs14 -t HekRDIP2/HekRDIP.bam.sorted.bam -c HekRDIP2/HekInput.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name HekRDIP2P
-/apps1/macs/1.4.2/bin/macs14 -t RDIPRound2/Hek1RDIP.bam.sorted.bam -c RDIPRound2/Hek1Input.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name Hek1
-/apps1/macs/1.4.2/bin/macs14 -t RDIPRound2/10733-2.bam -c RDIPRound2/10733-1.bam --format=BAM --bw=200 --wig --space=100 --name Hek1NoPCRDel
+macs14 -t Imr90RDIP/Imr90RDIP.bam.sorted.bam -c Imr90RDIP/Imr90Input.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name Imr90RDIP
+macs14 -t HekRDIP2/HekRDIP.bam.sorted.bam -c HekRDIP2/HekInput.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name HekRDIP2P
+macs14 -t RDIPRound2/Hek1RDIP.bam.sorted.bam -c RDIPRound2/Hek1Input.bam.sorted.bam --format=BAM --bw=200 --wig --space=100 --name Hek1
+macs14 -t RDIPRound2/10733-2.bam -c RDIPRound2/10733-1.bam --format=BAM --bw=200 --wig --space=100 --name Hek1NoPCRDel
 
 #Number of peaks called:
 #HekRDIP2 - 38994
@@ -58,8 +56,8 @@ module load macs/1.4.2
 #http://genomebiology.com/2012/13/10/r98
 
 #Measuring the number of peaks intersecting between datasets:
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b Imr90RDIP/Imr90RDIP_peaks.bed -wo > Hek2andImr90Intersect.bed
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a HekRDIP2/HekRDIP2P_peaks.bed -b Imr90RDIP/Imr90RDIP_peaks.bed -wo > Hek2andImr90Intersect.bed
 #HekRDIP2 and Imr90RDIP  > Hek2andImr90Intersect.bed = 27294 peaks
 
 

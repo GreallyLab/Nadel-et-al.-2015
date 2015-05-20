@@ -8,8 +8,8 @@
 #V3 - stop
 #V4 - methylation value
 #Intersecting with RDIP peaks from IMR90
-#bedtools "current" refers to Bedtools v2.16.2
-/apps1/bedtools/current/intersectBed -a SecondStrandCounts/IMR90minus10 -b bwbisulfiteseqIMR90.bedGraph -wo > IMR90RDIPMethylation
+#bedtools refers to Bedtools v2.16.2
+bedtools intersectBed -a SecondStrandCounts/IMR90minus10 -b bwbisulfiteseqIMR90.bedGraph -wo > IMR90RDIPMethylation
 #The following analysis was performed in R v. 2.15.0
 #RDIP intersected with methylation file
 RDIPMeth<-read.table("~/IMR90RDIPMethylation", stringsAsFactors=F)
